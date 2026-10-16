@@ -1,45 +1,61 @@
 package puppy.code;
 
 import com.badlogic.gdx.Game;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.Screen;
+import puppy.code.screen.GameOverScreen;
+import puppy.code.screen.GameScreen;
+import puppy.code.screen.MainMenuScreen;
+import puppy.code.screen.PauseScreen;
 
-	public class GameLluviaMenu extends Game {
+public class GameLluviaMenu extends Game {
+    private GameAssets assets;
+    private int highScore;
 
-		private SpriteBatch batch;
-		private BitmapFont font;
-		private int higherScore;
+    @Override
+    public void create() {
+        assets = new GameAssets();
+        setScreen(new MainMenuScreen(this));
+    }
 
-		public void create() {
-			batch = new SpriteBatch();
-			font = new BitmapFont(); // use libGDX's default Arial font
-			this.setScreen(new MainMenuScreen(this));
-		}
+    public GameAssets getAssets() {
+        return assets;
+    }
 
-		public void render() {
-			super.render(); // important!
-		}
+    public int getHighScore() {
+        return highScore;
+    }
 
-		public void dispose() {
-			batch.dispose();
-			font.dispose();
-		}
+    public void startGame() {
+        replaceScreen(new GameScreen(this));
+    }
 
-		public SpriteBatch getBatch() {
-			return batch;
-		}
+    public void showGameOver(int score) {
+        highScore = Math.max(highScore, score);
+        replaceScreen(new GameOverScreen(this));
+    }
 
-		public BitmapFont getFont() {
-			return font;
-		}
+    public void pauseGame(GameScreen gameScreen) {
+        setScreen(new PauseScreen(this, gameScreen));
+    }
 
-		public int getHigherScore() {
-			return higherScore;
-		}
+    public void resumeGame(GameScreen gameScreen) {
+        replaceScreen(gameScreen);
+    }
 
-		public void setHigherScore(int higherScore) {
-			this.higherScore = higherScore;
-		}
-		
+    private void replaceScreen(Screen nextScreen) {
+        Screen previousScreen = getScreen();
+        setScreen(nextScreen);
+        if (previousScreen != null) {
+            previousScreen.dispose();
+        }
+    }
 
-	}
+    @Override
+    public void dispose() {
+        Screen currentScreen = getScreen();
+        if (currentScreen != null) {
+            currentScreen.dispose();
+        }
+        assets.dispose();
+    }
+}
