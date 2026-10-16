@@ -58,11 +58,9 @@ Both commands should report Java 11.
 ### 2. Clone the repository
 
 ```bash
-git clone <repository-url>
-cd GameLluviaMenu2024
+git clone https://github.com/Malagel/GameLluvia
+cd GameLluvia
 ```
-
-Replace `<repository-url>` with the actual GitHub repository URL.
 
 ### 3. Run the game
 
