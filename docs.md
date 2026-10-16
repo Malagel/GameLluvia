@@ -12,28 +12,6 @@ The required development tools are:
 
 Gradle itself does not need to be installed. The included Gradle Wrapper downloads and runs the project's configured Gradle version, and Gradle resolves the LibGDX dependencies declared by the project.
 
-Clone and enter the repository:
-
-```bash
-git clone <repository-url>
-cd GameLluviaMenu2024
-```
-
-Build and run on Linux or macOS:
-
-```bash
-chmod +x gradlew
-./gradlew build
-./gradlew lwjgl3:run
-```
-
-Build and run on Windows PowerShell:
-
-```powershell
-.\gradlew.bat build
-.\gradlew.bat lwjgl3:run
-```
-
 IntelliJ IDEA, Eclipse, and Visual Studio Code with Java development extensions can be used for development, but they are optional. Configure the selected IDE to use JDK 11 and import the project as a Gradle project.
 
 # Project structure
