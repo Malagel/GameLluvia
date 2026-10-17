@@ -25,7 +25,7 @@ IntelliJ IDEA, Eclipse, and Visual Studio Code with Java development extensions 
 
 The code under `core/src/main/java/puppy/code/` is organized as follows:
 
-`GameLluviaMenu` initializes the application, owns the shared assets, coordinates screen transitions, and retains the high score for the application session. `GameAssets` loads each shared graphical or audio resource once and disposes of those resources when the application closes.
+`GameLluvia` initializes the application, owns the shared assets, coordinates screen transitions, and retains the high score for the application session. `GameAssets` loads each shared graphical or audio resource once and disposes of those resources when the application closes.
 
 The `screen` package handles rendering, user input, navigation, and audio responses. `GameScreen` translates keyboard input into gameplay updates and draws the state returned by the gameplay layer.
 
