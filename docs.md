@@ -1,6 +1,6 @@
 # Project overview
 
-GameLluviaMenu2024 is a small desktop game in which the player moves a bucket to collect beneficial falling drops while avoiding harmful ones. The project uses Java 11, LibGDX 1.12.1 for game and multimedia support, and Gradle 8.10.1 for builds and dependency management.
+GameLluvia is a small desktop game in which the player moves a bucket to collect beneficial falling drops while avoiding harmful ones. The project uses Java 11, LibGDX 1.12.1 for game and multimedia support, and Gradle 8.10.1 for builds and dependency management.
 
 # Requirements and setup
 
