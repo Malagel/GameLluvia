@@ -4,8 +4,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
+import puppy.code.GameConfig;
 import puppy.code.GameLluviaMenu;
 
 public final class MainMenuScreen extends ScreenAdapter {
@@ -13,13 +17,16 @@ public final class MainMenuScreen extends ScreenAdapter {
     private final SpriteBatch batch;
     private final BitmapFont font;
     private final OrthographicCamera camera;
+    private final Viewport viewport;
+    private final GlyphLayout layout;
 
     public MainMenuScreen(GameLluviaMenu game) {
         this.game = game;
         batch = game.getAssets().getBatch();
         font = game.getAssets().getFont();
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800.0f, 480.0f);
+        viewport = new FitViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
+        layout = new GlyphLayout();
     }
 
     @Override
@@ -28,12 +35,22 @@ public final class MainMenuScreen extends ScreenAdapter {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        font.draw(batch, "Bienvenido a Recolecta Gotas!!! ", 100.0f, camera.viewportHeight / 2.0f + 50.0f);
-        font.draw(batch, "Toca en cualquier lugar para comenzar!", 100.0f, camera.viewportHeight / 2.0f - 50.0f);
+        drawCentered("Bienvenido a Recolecta Gotas!!!", GameConfig.WORLD_HEIGHT / 2.0f + 38.0f);
+        drawCentered("Toca en cualquier lugar para comenzar!", GameConfig.WORLD_HEIGHT / 2.0f - 38.0f);
         batch.end();
 
         if (Gdx.input.isTouched()) {
             game.startGame();
         }
+    }
+
+    private void drawCentered(String text, float y) {
+        layout.setText(font, text);
+        font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2.0f, y);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
     }
 }

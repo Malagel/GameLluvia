@@ -6,13 +6,18 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import puppy.code.GameAssets;
+import puppy.code.GameConfig;
 import puppy.code.GameLluviaMenu;
 import puppy.code.gameplay.GameSession;
 import puppy.code.model.FallingItem;
+import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
     private final GameLluviaMenu game;
@@ -21,6 +26,8 @@ public final class GameScreen extends ScreenAdapter {
     private final SpriteBatch batch;
     private final BitmapFont font;
     private final OrthographicCamera camera;
+    private final Viewport viewport;
+    private final GlyphLayout layout;
 
     public GameScreen(GameLluviaMenu game) {
         this.game = game;
@@ -29,7 +36,8 @@ public final class GameScreen extends ScreenAdapter {
         batch = assets.getBatch();
         font = assets.getFont();
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800.0f, 480.0f);
+        viewport = new FitViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
+        layout = new GlyphLayout();
     }
 
     @Override
@@ -56,9 +64,16 @@ public final class GameScreen extends ScreenAdapter {
     }
 
     private void drawHud() {
-        font.draw(batch, "Gotas totales: " + session.getScore(), 5.0f, 475.0f);
-        font.draw(batch, "Vidas : " + session.getLives(), 670.0f, 475.0f);
-        font.draw(batch, "HighScore : " + game.getHighScore(), camera.viewportWidth / 2.0f - 50.0f, 475.0f);
+        float top = GameConfig.WORLD_HEIGHT - 6.0f;
+        font.draw(batch, "Gotas totales: " + session.getScore(), 6.0f, top);
+
+        String highScore = "HighScore : " + game.getHighScore();
+        layout.setText(font, highScore);
+        font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2.0f, top);
+
+        String lives = "Vidas : " + session.getLives();
+        layout.setText(font, lives);
+        font.draw(batch, layout, GameConfig.WORLD_WIDTH - layout.width - 6.0f, top);
     }
 
     private void playEventSounds(GameSession.UpdateResult result) {
@@ -76,7 +91,7 @@ public final class GameScreen extends ScreenAdapter {
         if (session.isPlayerHurt()) {
             y += MathUtils.random(-5, 5);
         }
-        batch.draw(assets.getPlayerTexture(), session.getPlayerX(), y);
+        batch.draw(assets.getPlayerTexture(), session.getPlayerX(), y, Player.SIZE, Player.SIZE);
         session.advancePlayerHurtAnimation();
     }
 
@@ -85,7 +100,7 @@ public final class GameScreen extends ScreenAdapter {
             Texture texture = item.getType() == FallingItem.Type.BAD
                     ? assets.getBadDropTexture()
                     : assets.getGoodDropTexture();
-            batch.draw(texture, item.getX(), item.getY());
+            batch.draw(texture, item.getX(), item.getY(), FallingItem.SIZE, FallingItem.SIZE);
         }
     }
 
@@ -103,5 +118,10 @@ public final class GameScreen extends ScreenAdapter {
     public void pause() {
         assets.stopRainMusic();
         game.pauseGame(this);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
     }
 }

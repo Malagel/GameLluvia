@@ -2,15 +2,16 @@ package puppy.code.model;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import puppy.code.GameConfig;
 
 public final class Player {
-    public static final float SIZE = 64.0f;
+    public static final float SIZE = 48.0f;
 
-    private static final float START_X = 800.0f / 2.0f - SIZE / 2.0f;
-    private static final float START_Y = 20.0f;
-    private static final float SPEED = 400.0f;
+    private static final float START_X = GameConfig.WORLD_WIDTH / 2.0f - SIZE / 2.0f;
+    private static final float START_Y = 15.0f;
+    private static final float SPEED = 320.0f;
     private static final float MIN_X = 0.0f;
-    private static final float MAX_X = 800.0f - SIZE;
+    private static final float MAX_X = GameConfig.WORLD_WIDTH - SIZE;
     private static final int STARTING_LIVES = 3;
     private static final int HURT_DURATION_FRAMES = 50;
 

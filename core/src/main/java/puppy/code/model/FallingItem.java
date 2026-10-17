@@ -3,9 +3,9 @@ package puppy.code.model;
 import com.badlogic.gdx.math.Rectangle;
 
 public abstract class FallingItem {
-    public static final float SIZE = 64.0f;
+    public static final float SIZE = 48.0f;
 
-    private static final float FALL_SPEED = 300.0f;
+    private static final float FALL_SPEED = 225.0f;
 
     private final Rectangle bounds;
 

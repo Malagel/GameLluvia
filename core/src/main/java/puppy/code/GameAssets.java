@@ -21,7 +21,7 @@ public final class GameAssets implements Disposable {
     public GameAssets() {
         batch = new SpriteBatch();
         font = new BitmapFont();
-        font.getData().setScale(2.0f);
+        font.getData().setScale(1.5f);
         playerTexture = new Texture(Gdx.files.internal("bucket.png"));
         goodDropTexture = new Texture(Gdx.files.internal("drop.png"));
         badDropTexture = new Texture(Gdx.files.internal("dropBad.png"));
