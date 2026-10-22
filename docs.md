@@ -25,9 +25,11 @@ IntelliJ IDEA, Eclipse, and Visual Studio Code with Java development extensions 
 
 The code under `core/src/main/java/puppy/code/` is organized as follows:
 
-`GameLluvia` initializes the application, owns the shared assets, coordinates screen transitions, and retains the high score for the application session. `GameAssets` loads each shared graphical or audio resource once and disposes of those resources when the application closes.
+`GameLluviaMenu` initializes the application, owns the shared assets, initializes the application-scoped leaderboard, and coordinates transitions among the main menu, gameplay, pause, game-over, and leaderboard screens. `GameAssets` loads each shared graphical or audio resource once, including the small texture used to style Scene2D buttons, and disposes of those resources when the application closes.
 
-The `screen` package handles rendering, user input, navigation, and audio responses. `GameScreen` translates keyboard input into gameplay updates and draws the state returned by the gameplay layer.
+The `screen` package handles rendering, user input, navigation, and audio responses. `MainMenuScreen`, `LeaderboardScreen`, and `GameOverScreen` use Scene2D stages with the same fixed-world `FitViewport` as gameplay. `GameScreen` translates keyboard input into gameplay updates and draws the state returned by the gameplay layer. The gameplay HUD shows the current score and lives; persistent scores are presented only by the leaderboard screen.
+
+The `score` package contains the local leaderboard. `HighScoreManager` is a controlled, application-scoped Singleton that ranks and exposes at most five scores. It depends on the small `ScoreStore` persistence boundary; `PreferencesScoreStore` is the production adapter backed by LibGDX Preferences. This keeps ranking, malformed-data handling, and duplicate-completion protection testable without graphics or a LibGDX application.
 
 The `gameplay` package contains the active-session rules. `GameSession` coordinates the player, falling items, collisions, score, lives, and game-over state. `DropSpawner` owns drop timing, type selection, and initial positions. Neither class depends on rendering, input, audio, or screens.
 
@@ -37,7 +39,7 @@ The `model` package contains the game entities and their state. `Player` owns mo
 
 State is private and changed through small, intention-revealing methods. Read-only collection views prevent screens from modifying session-owned collections. Responsibilities are separated so that screens present state, gameplay classes apply rules, models protect entity state, and the application owns shared resources and navigation.
 
-Dependencies point from the application and screens toward gameplay and models; models do not know about screens or LibGDX rendering and audio resources. Shared disposable resources have one owner, `GameAssets`, and are never disposed by individual screens.
+Dependencies point from the application and screens toward gameplay, scores, and models; models do not know about screens or LibGDX rendering and audio resources. Score rules depend on `ScoreStore`, not directly on LibGDX. Shared disposable resources have one owner, `GameAssets`, and are never disposed by individual screens. Each Scene2D screen owns and disposes its stage while using, but not owning, the shared batch and UI texture.
 
 The implementation applies SOLID and GRASP principles in proportion to the size of the game: classes have focused responsibilities, gameplay rules remain cohesive, and screen coupling to model internals is limited. New presentation code belongs in `screen`, session rules in `gameplay`, entity behavior in `model`, and shared asset lifecycle changes in `GameAssets`.
 

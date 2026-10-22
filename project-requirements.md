@@ -59,6 +59,105 @@
 - Additional drop types and effects (including healing, temporary, or combined
   effects) are planned for future iterations and are explicitly not implemented here.
 
+## GM-6 — Singleton and persistent local leaderboard (code implemented; UML pending)
+
+### Problem and architectural context
+
+- The game previously retained one high-score integer only in `GameLluviaMenu`, so
+  it was lost when the application closed and could not represent a ranking. The
+  gameplay HUD also mixed session information with that application-level value,
+  and the menu had no route for consulting saved results.
+- A leaderboard is shared application state: gameplay writes completed results and
+  a separate screen reads them. It must have one authoritative ranking and one
+  persistence lifecycle without making screens responsible for file formats or
+  storage cleanup.
+
+### Singleton solution and controlled lifecycle
+
+- `HighScoreManager` is the single owner of ranking rules and saved-score access.
+  Its constructor is private. `initialize(ScoreStore)` creates the instance once,
+  `getInstance()` provides controlled access only after initialization, and
+  `shutdown()` ends the application-scoped lifecycle without deleting persisted
+  scores. The instance contains no textures, audio, stages, or other disposable
+  LibGDX resources.
+- `GameLluviaMenu.create()` supplies a `PreferencesScoreStore` and retains the
+  returned singleton for dependency access by screens. `dispose()` shuts down the
+  singleton after disposing the current screen and shared assets. Repeated
+  initialization during the same lifecycle returns the same object.
+- The Singleton is appropriate here because the local ranking must have exactly one
+  coordinator during an application run. Storage remains behind the `ScoreStore`
+  interface, avoiding a global dependency on LibGDX inside ranking logic and
+  allowing simulated restarts in unit tests.
+
+### Storage, ranking, and duplicate protection
+
+- `PreferencesScoreStore` uses one LibGDX Preferences entry. Scores are serialized
+  in descending order, and every write replaces that complete entry. The manager
+  sorts after loading or recording and truncates its owned list to five before it
+  writes, so results outside the top five are removed from persistent storage and
+  cannot accumulate in hidden keys.
+- Missing or blank data produces an empty ranking. Malformed or negative values are
+  discarded while valid values are retained; overlong or noncanonical saved data is
+  rewritten in normalized top-five form. Equal scores from distinct games remain
+  valid separate leaderboard entries.
+- Every started game receives an application-local positive completion identifier.
+  `recordScore(id, score)` remembers the latest monotonically increasing identifier
+  handled in the current lifecycle and ignores repeated callbacks for the same or
+  an older completed game, including when its score did not enter the top five. The
+  persisted data intentionally contains only the five scores; completion identifiers
+  do not accumulate in memory or on disk.
+- `getScores()` returns an unmodifiable defensive copy, so screens cannot mutate the
+  manager's state.
+
+### Screen integration and navigation
+
+- The redesigned Scene2D main menu shows **Game Lluvia** and the **Jugar**,
+  **Puntuaciones**, and disabled **Opciones - Próximamente** buttons. Its stage uses
+  the existing 640x360 `FitViewport`, keeping pointer coordinates correct after a
+  resize.
+- `LeaderboardScreen` reads the manager's snapshot, displays ranked scores in
+  descending order, shows **Aún no hay puntuaciones.** for an empty ranking, and
+  returns through **Volver**. It contains no persistence or ranking logic.
+- `GameOverScreen` shows the completed score and supplies **Reintentar** and
+  **Menú principal** actions. `GameLluviaMenu.showGameOver()` records the result
+  before navigation. `GameScreen` sends its game identifier with the score and no
+  longer draws a high score in the HUD; current score, lives, gameplay, sound,
+  music, pause, and resume behavior remain unchanged.
+- The small generated UI texture remains owned and disposed by `GameAssets`. Each
+  menu-oriented screen owns only its stage and clears its input processor when it
+  is hidden, preserving the established resource-ownership model.
+
+### GRASP and SOLID considerations
+
+- **Information Expert / High Cohesion:** `HighScoreManager` owns ranking and
+  validation, the store adapter owns Preferences calls, screens own presentation,
+  and `GameLluviaMenu` remains the navigation controller.
+- **Low Coupling / Indirection / Dependency Inversion:** score logic depends on the
+  narrow `ScoreStore` abstraction. Neither the manager nor its tests depend on a
+  stage, renderer, or active LibGDX runtime.
+- **Single Responsibility:** persistence access, ranking policy, navigation,
+  resource ownership, and UI presentation remain in separate focused classes.
+  `ScreenUi` centralizes only the shared visual styles so the three Scene2D screens
+  are easy to restyle consistently.
+- **Open/Closed and Interface Segregation:** another local persistence mechanism can
+  implement the two-method `ScoreStore` contract without changing ranking logic.
+  No player/account, online service, settings system, or speculative repository
+  hierarchy was added.
+
+### Verification and remaining academic work
+
+- `HighScoreManagerTest` covers Singleton identity and initialization control,
+  descending order, equal scores, the top-five limit, read-only access, persistence
+  across simulated restarts, physical normalization of overlong storage, empty and
+  malformed data, and duplicate completed-game protection.
+- The complete Gradle test suite passes, including the pre-existing gameplay and
+  strategy tests, and both core and desktop sources compile successfully.
+- The code-level GM-6 implementation is complete. The GM-6 UML diagram required by
+  the academic specification is deliberately still pending, as this iteration does
+  not create that diagram. Configurable options, player identities, accounts,
+  online leaderboards, and extra score metadata are also intentionally outside
+  scope.
+
 ## GM-5 — Encapsulation, GRASP, and SOLID (implemented)
 
 ### Problems identified and focused changes
