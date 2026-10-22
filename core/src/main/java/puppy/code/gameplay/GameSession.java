@@ -12,8 +12,8 @@ import puppy.code.model.Player;
 public final class GameSession {
     private final Player player;
     private final DropSource dropSource;
-    private final List<FallingItem> fallingItems;
-    private final List<FallingItem> readOnlyFallingItems;
+    private final List<FallingItemView> fallingItems;
+    private final List<FallingItemView> readOnlyFallingItems;
 
     public GameSession() {
         this(new Player(), new DropSpawner());
@@ -26,7 +26,7 @@ public final class GameSession {
         readOnlyFallingItems = Collections.unmodifiableList(fallingItems);
         FallingItem initialDrop = dropSource.createInitialDrop();
         if (initialDrop != null) {
-            fallingItems.add(initialDrop);
+            addFallingItem(initialDrop);
         }
     }
 
@@ -38,13 +38,13 @@ public final class GameSession {
         player.move(movingLeft, movingRight, delta);
         FallingItem newItem = dropSource.createDropIfDue();
         if (newItem != null) {
-            fallingItems.add(newItem);
+            addFallingItem(newItem);
         }
 
         List<GameplayEvent> events = new ArrayList<>();
-        ListIterator<FallingItem> iterator = fallingItems.listIterator();
+        ListIterator<FallingItemView> iterator = fallingItems.listIterator();
         while (iterator.hasNext()) {
-            FallingItem item = iterator.next();
+            FallingItem item = iterator.next().item;
             item.fall(delta);
             if (item.isBelowWorld()) {
                 iterator.remove();
@@ -71,6 +71,10 @@ public final class GameSession {
         return result;
     }
 
+    private void addFallingItem(FallingItem item) {
+        fallingItems.add(new FallingItemView(item));
+    }
+
     public int getScore() {
         return player.getScore();
     }
@@ -91,8 +95,32 @@ public final class GameSession {
         return player.isHurt();
     }
 
-    public List<FallingItem> getFallingItems() {
+    public List<FallingItemView> getFallingItems() {
         return readOnlyFallingItems;
+    }
+
+    /**
+     * Read-only projection of a session-owned falling item. One projection is
+     * allocated when the item spawns and reused while it remains active.
+     */
+    public static final class FallingItemView {
+        private final FallingItem item;
+
+        private FallingItemView(FallingItem item) {
+            this.item = Objects.requireNonNull(item, "item");
+        }
+
+        public float getX() {
+            return item.getX();
+        }
+
+        public float getY() {
+            return item.getY();
+        }
+
+        public FallingItem.Type getType() {
+            return item.getType();
+        }
     }
 
     public static final class UpdateResult {

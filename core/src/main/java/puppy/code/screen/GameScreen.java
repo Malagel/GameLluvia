@@ -99,7 +99,7 @@ public final class GameScreen extends ScreenAdapter {
     }
 
     private void drawFallingItems() {
-        for (FallingItem item : session.getFallingItems()) {
+        for (GameSession.FallingItemView item : session.getFallingItems()) {
             Texture texture = item.getType() == FallingItem.Type.BAD
                     ? assets.getBadDropTexture()
                     : assets.getGoodDropTexture();

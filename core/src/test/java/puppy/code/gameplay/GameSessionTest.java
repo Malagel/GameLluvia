@@ -2,9 +2,11 @@ package puppy.code.gameplay;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import puppy.code.model.BadDrop;
 import puppy.code.model.DamageEffect;
@@ -75,6 +77,24 @@ class GameSessionTest {
 
         assertThrows(UnsupportedOperationException.class,
                 () -> result.getEvents().add(GameplayEvent.PLAYER_DAMAGED));
+    }
+
+    @Test
+    void fallingItemsAreExposedAsReusableReadOnlyProjections() {
+        Player player = new Player();
+        GameSession session = sessionWith(player, new GoodDrop(0.0f, 100.0f));
+
+        List<GameSession.FallingItemView> items = session.getFallingItems();
+        GameSession.FallingItemView item = items.get(0);
+        float initialY = item.getY();
+
+        session.update(0.1f, false, false);
+
+        assertSame(item, session.getFallingItems().get(0));
+        assertEquals(initialY - 22.5f, item.getY());
+        assertEquals(FallingItem.Type.GOOD, item.getType());
+        assertFalse(FallingItem.class.isAssignableFrom(item.getClass()));
+        assertThrows(UnsupportedOperationException.class, items::clear);
     }
 
     private GameSession sessionWith(Player player, FallingItem initialDrop) {
