@@ -233,6 +233,86 @@
   from this completed refactor. The planned Options screen is also not implemented;
   it can use `BaseUiScreen` when its requirements are defined.
 
+## GM-9 — Builder for drop spawn configuration (code implemented; UML pending)
+
+### Problem and architectural context
+
+- `DropSpawner` previously embedded its 100 ms interval and selected `GoodDrop` or
+  `BadDrop` with a fixed conditional. Adding a third drop, changing a distribution,
+  or defining a separate configuration would have required editing the runtime
+  spawning algorithm and adding more branches.
+- A spawning configuration has several related values and invariants: a positive
+  interval, one or more non-null factories, and positive integer weights whose sum
+  must be representable. Builder fits this construction because callers can add an
+  arbitrary number of weighted entries incrementally and validate the complete
+  configuration at one explicit `build()` step.
+
+### Implemented solution and participants
+
+- `DropSpawnProfile` is the immutable product. It retains the spawn interval, the
+  weighted `DropFactory` registrations, and their validated total. Its nested
+  `Builder` supplies `spawnIntervalMillis(long)` and `addDrop(int, DropFactory)`;
+  constructor references such as `GoodDrop::new` and `BadDrop::new` satisfy the
+  two-coordinate factory contract directly.
+- `build()` rejects non-positive or nanosecond-overflowing intervals, an empty
+  registration list, non-positive weights, null factories, and integer overflow in
+  the accumulated weight. A completed profile defensively copies the registrations
+  and returns an unmodifiable list. Reusing and then modifying a builder therefore
+  cannot change profiles that it built earlier.
+- `DropSpawner` accepts a profile through its public constructor. It remains
+  responsible for elapsed-time checks, choosing a random point in the total integer
+  weight, walking the registered weights, selecting the horizontal coordinate, and
+  invoking the chosen factory at world height. Selection contains no drop-type
+  conditional, so another registered factory does not require an algorithm change.
+- Normal gameplay still creates `new DropSpawner()`. That convenience constructor
+  delegates to `standardProfile()`, which uses the Builder to register a 100 ms
+  interval, weight 6 for `GoodDrop`, and weight 4 for `BadDrop`. `GameSession`
+  continues to consume only the existing `DropSource` abstraction.
+
+### Compatibility and design principles
+
+- The integer weights reproduce the original 60/40 distribution without requiring
+  percentages to total 100. The session still receives an immediate initial drop;
+  later drops require elapsed time strictly greater than 100 ms. Spawns retain the
+  inclusive horizontal range from 0 through world width minus item size and the
+  same world-height y coordinate. Falling speed, collisions, effects, scoring,
+  damage, player movement, presentation, and audio code were not changed.
+- **Encapsulation and immutability:** profile state is final, validation protects
+  its invariants, and registration storage cannot be mutated through either the
+  builder or getter after construction.
+- **Information Expert / Creator / High Cohesion:** the Builder knows how to
+  assemble and validate the product, the profile owns configuration, `DropSpawner`
+  owns runtime creation policy, and `GameSession` remains the gameplay controller.
+- **Single Responsibility and Dependency Inversion:** construction, stored rules,
+  nondeterministic runtime behavior, and session flow remain separate. The session
+  depends on `DropSource`, while the spawner depends on the supplied profile and its
+  factory contract rather than concrete drop constructors.
+- **Open/Closed and Protected Variations:** weighted selection works over any number
+  of registrations. The existing `DropEffect` Strategy remains independent and is
+  still executed by `FallingItem`; Builder configures creation without replacing or
+  absorbing Strategy responsibilities.
+
+### Verification and future considerations
+
+- `DropSpawnProfileTest` covers successful construction, retained interval and
+  weights, read-only registrations, snapshots made from a reused builder, invalid
+  intervals, missing registrations, invalid weights, null factories, and total
+  weight overflow. `DropSpawnerTest` uses controlled random values and time to cover
+  exact weighted boundaries, one and several factories, the standard 6/4 profile,
+  the immediate first drop, strict interval timing, vertical placement, and the
+  inclusive horizontal boundary without flaky statistical assertions.
+- The complete automated test suite and Gradle build pass, and `git diff --check`
+  reports no whitespace errors. Automated tests do not replace a manual playthrough
+  for audiovisual behavior, but the balance constants and all unrelated gameplay
+  code remain unchanged.
+- Future difficulty levels, additional drops, UI-created profiles, or runtime
+  profile replacement can build or supply other profiles through the same boundary.
+  None of those features, nor persistence or progressive difficulty, is implemented
+  by this change.
+- The code-level GM-9 implementation is complete. The UML diagram required by the
+  academic GM-9 specification remains pending and is intentionally not created in
+  this iteration.
+
 ## GM-5 — Encapsulation, GRASP, and SOLID (implemented)
 
 ### Problems identified and focused changes
