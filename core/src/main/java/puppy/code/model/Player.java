@@ -36,7 +36,10 @@ public final class Player {
     }
 
     public void addScore(int points) {
-        score += points;
+        if (points <= 0) {
+            throw new IllegalArgumentException("points must be greater than zero");
+        }
+        score = (int) Math.min(Integer.MAX_VALUE, (long) score + points);
     }
 
     public void takeDamage() {
