@@ -7,15 +7,17 @@ import puppy.code.model.BadDrop;
 import puppy.code.model.FallingItem;
 import puppy.code.model.GoodDrop;
 
-public final class DropSpawner {
+public final class DropSpawner implements DropSource {
     private static final long SPAWN_INTERVAL_NANOS = 100_000_000L;
 
     private long lastSpawnTime;
 
+    @Override
     public FallingItem createInitialDrop() {
         return createDrop();
     }
 
+    @Override
     public FallingItem createDropIfDue() {
         if (TimeUtils.nanoTime() - lastSpawnTime > SPAWN_INTERVAL_NANOS) {
             return createDrop();

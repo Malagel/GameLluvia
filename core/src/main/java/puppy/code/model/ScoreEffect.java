@@ -1,5 +1,8 @@
 package puppy.code.model;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Awards a configurable number of points to the player.
  */
@@ -14,7 +17,8 @@ public final class ScoreEffect implements DropEffect {
     }
 
     @Override
-    public void apply(Player player) {
+    public List<GameplayEvent> apply(Player player) {
         player.addScore(points);
+        return Collections.singletonList(GameplayEvent.DROP_COLLECTED);
     }
 }
