@@ -56,6 +56,14 @@ public final class MainMenuScreen extends ScreenAdapter {
         TextButton optionsButton = new TextButton("Opciones - Próximamente", buttonStyle);
         optionsButton.setDisabled(true);
 
+        TextButton exitButton = new TextButton("Salir", buttonStyle);
+        exitButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.exit();
+            }
+        });
+
         Table menu = new Table();
         menu.setFillParent(true);
         menu.add(title).padBottom(28.0f);
@@ -65,6 +73,8 @@ public final class MainMenuScreen extends ScreenAdapter {
         menu.add(scoresButton).width(BUTTON_WIDTH).height(BUTTON_HEIGHT).pad(6.0f);
         menu.row();
         menu.add(optionsButton).width(BUTTON_WIDTH).height(BUTTON_HEIGHT).pad(6.0f);
+        menu.row();
+        menu.add(exitButton).width(BUTTON_WIDTH).height(BUTTON_HEIGHT).pad(6.0f);
         stage.addActor(menu);
     }
 
