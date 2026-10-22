@@ -52,10 +52,7 @@ public final class GameScreen extends ScreenAdapter {
         batch.begin();
         drawHud();
 
-        GameSession.UpdateResult result = session.update(
-                delta,
-                Gdx.input.isKeyPressed(Input.Keys.LEFT),
-                Gdx.input.isKeyPressed(Input.Keys.RIGHT));
+        GameSession.UpdateResult result = session.update(delta, isMovingLeft(), isMovingRight());
         playEventSounds(result);
         drawPlayer();
         drawFallingItems();
@@ -64,6 +61,14 @@ public final class GameScreen extends ScreenAdapter {
         if (result.isGameOver()) {
             game.showGameOver(gameId, session.getScore());
         }
+    }
+
+    private boolean isMovingLeft() {
+        return Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.A);
+    }
+
+    private boolean isMovingRight() {
+        return Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D);
     }
 
     private void drawHud() {
