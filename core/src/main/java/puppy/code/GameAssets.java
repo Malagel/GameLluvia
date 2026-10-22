@@ -3,6 +3,7 @@ package puppy.code;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -14,6 +15,7 @@ public final class GameAssets implements Disposable {
     private final Texture playerTexture;
     private final Texture goodDropTexture;
     private final Texture badDropTexture;
+    private final Texture uiTexture;
     private final Sound collectSound;
     private final Sound hurtSound;
     private final Music rainMusic;
@@ -25,6 +27,11 @@ public final class GameAssets implements Disposable {
         playerTexture = new Texture(Gdx.files.internal("bucket.png"));
         goodDropTexture = new Texture(Gdx.files.internal("drop.png"));
         badDropTexture = new Texture(Gdx.files.internal("dropBad.png"));
+        Pixmap uiPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        uiPixmap.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        uiPixmap.fill();
+        uiTexture = new Texture(uiPixmap);
+        uiPixmap.dispose();
         collectSound = Gdx.audio.newSound(Gdx.files.internal("drop.wav"));
         hurtSound = Gdx.audio.newSound(Gdx.files.internal("hurt.ogg"));
         rainMusic = Gdx.audio.newMusic(Gdx.files.internal("rain.mp3"));
@@ -51,6 +58,10 @@ public final class GameAssets implements Disposable {
         return badDropTexture;
     }
 
+    public Texture getUiTexture() {
+        return uiTexture;
+    }
+
     public void playCollectSound() {
         collectSound.play();
     }
@@ -73,6 +84,7 @@ public final class GameAssets implements Disposable {
         hurtSound.dispose();
         collectSound.dispose();
         badDropTexture.dispose();
+        uiTexture.dispose();
         goodDropTexture.dispose();
         playerTexture.dispose();
         font.dispose();

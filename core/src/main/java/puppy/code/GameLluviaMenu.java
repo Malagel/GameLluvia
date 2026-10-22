@@ -4,16 +4,24 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 import puppy.code.screen.GameOverScreen;
 import puppy.code.screen.GameScreen;
+import puppy.code.screen.LeaderboardScreen;
 import puppy.code.screen.MainMenuScreen;
 import puppy.code.screen.PauseScreen;
+import puppy.code.score.HighScoreManager;
+import puppy.code.score.PreferencesScoreStore;
 
 public class GameLluviaMenu extends Game {
+    private static final String SCORE_PREFERENCES = "game-lluvia-high-scores";
+
     private GameAssets assets;
-    private int highScore;
+    private HighScoreManager highScoreManager;
+    private long nextGameId;
 
     @Override
     public void create() {
         assets = new GameAssets();
+        highScoreManager = HighScoreManager.initialize(
+                new PreferencesScoreStore(com.badlogic.gdx.Gdx.app.getPreferences(SCORE_PREFERENCES)));
         setScreen(new MainMenuScreen(this));
     }
 
@@ -21,17 +29,25 @@ public class GameLluviaMenu extends Game {
         return assets;
     }
 
-    public int getHighScore() {
-        return highScore;
+    public HighScoreManager getHighScoreManager() {
+        return highScoreManager;
     }
 
     public void startGame() {
-        replaceScreen(new GameScreen(this));
+        replaceScreen(new GameScreen(this, ++nextGameId));
     }
 
-    public void showGameOver(int score) {
-        highScore = Math.max(highScore, score);
-        replaceScreen(new GameOverScreen(this));
+    public void showGameOver(long completedGameId, int score) {
+        highScoreManager.recordScore(completedGameId, score);
+        replaceScreen(new GameOverScreen(this, score));
+    }
+
+    public void showMainMenu() {
+        replaceScreen(new MainMenuScreen(this));
+    }
+
+    public void showLeaderboard() {
+        replaceScreen(new LeaderboardScreen(this));
     }
 
     public void pauseGame(GameScreen gameScreen) {
@@ -57,5 +73,6 @@ public class GameLluviaMenu extends Game {
             currentScreen.dispose();
         }
         assets.dispose();
+        HighScoreManager.shutdown();
     }
 }

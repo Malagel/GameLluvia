@@ -22,6 +22,7 @@ import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
     private final GameLluviaMenu game;
+    private final long gameId;
     private final GameAssets assets;
     private final GameSession session;
     private final SpriteBatch batch;
@@ -30,8 +31,9 @@ public final class GameScreen extends ScreenAdapter {
     private final Viewport viewport;
     private final GlyphLayout layout;
 
-    public GameScreen(GameLluviaMenu game) {
+    public GameScreen(GameLluviaMenu game, long gameId) {
         this.game = game;
+        this.gameId = gameId;
         assets = game.getAssets();
         session = new GameSession();
         batch = assets.getBatch();
@@ -60,17 +62,13 @@ public final class GameScreen extends ScreenAdapter {
         batch.end();
 
         if (result.isGameOver()) {
-            game.showGameOver(session.getScore());
+            game.showGameOver(gameId, session.getScore());
         }
     }
 
     private void drawHud() {
         float top = GameConfig.WORLD_HEIGHT - 6.0f;
         font.draw(batch, "Gotas totales: " + session.getScore(), 6.0f, top);
-
-        String highScore = "HighScore : " + game.getHighScore();
-        layout.setText(font, highScore);
-        font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2.0f, top);
 
         String lives = "Vidas : " + session.getLives();
         layout.setText(font, lives);
