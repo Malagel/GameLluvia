@@ -16,6 +16,7 @@ public final class HighScoreManager {
     private final ScoreStore store;
     private final List<Integer> scores = new ArrayList<>();
     private long lastRecordedGameId;
+    private boolean savePending;
 
     private HighScoreManager(ScoreStore store) {
         this.store = Objects.requireNonNull(store, "store");
@@ -47,7 +48,10 @@ public final class HighScoreManager {
     /**
      * Records one completed game. Equal scores from different games are valid.
      * Game ids are supplied in increasing order by the application. Reusing a game
-     * id is ignored, even when that score missed the top five.
+     * id is ignored, even when that score missed the top five. The return value
+     * reports whether the completion was accepted, not whether persistence
+     * succeeded; callers can inspect {@link #hasPendingSave()} when that distinction
+     * matters.
      */
     public synchronized boolean recordScore(long completedGameId, int score) {
         if (completedGameId <= 0L) {
@@ -57,14 +61,35 @@ public final class HighScoreManager {
             throw new IllegalArgumentException("score cannot be negative");
         }
         if (completedGameId <= lastRecordedGameId) {
+            retryPendingSave();
             return false;
         }
         lastRecordedGameId = completedGameId;
 
         scores.add(score);
         normalizeRanking();
-        store.save(serializeScores());
+        saveCurrentRanking();
         return true;
+    }
+
+    /**
+     * Reports whether the in-memory ranking has not yet been saved successfully.
+     */
+    public synchronized boolean hasPendingSave() {
+        return savePending;
+    }
+
+    /**
+     * Retries a failed save without adding another score. Writing the complete
+     * serialized ranking makes repeated attempts safe.
+     *
+     * @return {@code true} when no save is pending after this call
+     */
+    public synchronized boolean retryPendingSave() {
+        if (!savePending) {
+            return true;
+        }
+        return saveCurrentRanking();
     }
 
     public synchronized List<Integer> getScores() {
@@ -91,7 +116,18 @@ public final class HighScoreManager {
         normalizeRanking();
         String normalized = serializeScores();
         if (!normalized.equals(saved)) {
-            store.save(normalized);
+            saveCurrentRanking();
+        }
+    }
+
+    private boolean saveCurrentRanking() {
+        try {
+            store.save(serializeScores());
+            savePending = false;
+            return true;
+        } catch (RuntimeException ignored) {
+            savePending = true;
+            return false;
         }
     }
 

@@ -107,6 +107,35 @@ class HighScoreManagerTest {
         assertEquals(1, store.saveCount);
     }
 
+    @Test
+    void saveFailureKeepsTheAcceptedRankingAndDoesNotEscape() {
+        FailingScoreStore store = new FailingScoreStore("90,70", 1);
+        HighScoreManager manager = HighScoreManager.initialize(store);
+
+        assertTrue(manager.recordScore(1L, 80));
+
+        assertEquals(Arrays.asList(90, 80, 70), manager.getScores());
+        assertTrue(manager.hasPendingSave());
+        assertEquals("90,70", store.data);
+    }
+
+    @Test
+    void pendingSaveCanBeRetriedWithoutDuplicatingTheCompletion() {
+        FailingScoreStore store = new FailingScoreStore("", 1);
+        HighScoreManager manager = HighScoreManager.initialize(store);
+
+        assertTrue(manager.recordScore(1L, 100));
+        assertTrue(manager.hasPendingSave());
+
+        assertTrue(manager.retryPendingSave());
+        assertFalse(manager.hasPendingSave());
+        assertFalse(manager.recordScore(1L, 100));
+
+        assertEquals(Collections.singletonList(100), manager.getScores());
+        assertEquals("100", store.data);
+        assertEquals(2, store.saveCount);
+    }
+
     private static final class InMemoryScoreStore implements ScoreStore {
         private String data;
         private int saveCount;
@@ -124,6 +153,32 @@ class HighScoreManagerTest {
         public void save(String serializedScores) {
             data = serializedScores;
             saveCount++;
+        }
+    }
+
+    private static final class FailingScoreStore implements ScoreStore {
+        private String data;
+        private int failuresRemaining;
+        private int saveCount;
+
+        private FailingScoreStore(String initialData, int failuresRemaining) {
+            data = initialData;
+            this.failuresRemaining = failuresRemaining;
+        }
+
+        @Override
+        public String load() {
+            return data;
+        }
+
+        @Override
+        public void save(String serializedScores) {
+            saveCount++;
+            if (failuresRemaining > 0) {
+                failuresRemaining--;
+                throw new IllegalStateException("temporary save failure");
+            }
+            data = serializedScores;
         }
     }
 }
