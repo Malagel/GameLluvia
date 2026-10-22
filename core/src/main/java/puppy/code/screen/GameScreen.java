@@ -17,6 +17,7 @@ import puppy.code.GameConfig;
 import puppy.code.GameLluviaMenu;
 import puppy.code.gameplay.GameSession;
 import puppy.code.model.FallingItem;
+import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
@@ -77,11 +78,16 @@ public final class GameScreen extends ScreenAdapter {
     }
 
     private void playEventSounds(GameSession.UpdateResult result) {
-        for (GameSession.GameplayEvent event : result.getEvents()) {
-            if (event == GameSession.GameplayEvent.DROP_COLLECTED) {
-                assets.playCollectSound();
-            } else {
-                assets.playHurtSound();
+        for (GameplayEvent event : result.getEvents()) {
+            switch (event) {
+                case DROP_COLLECTED:
+                    assets.playCollectSound();
+                    break;
+                case PLAYER_DAMAGED:
+                    assets.playHurtSound();
+                    break;
+                default:
+                    throw new IllegalStateException("Unhandled gameplay event: " + event);
             }
         }
     }
@@ -92,7 +98,6 @@ public final class GameScreen extends ScreenAdapter {
             y += MathUtils.random(-5, 5);
         }
         batch.draw(assets.getPlayerTexture(), session.getPlayerX(), y, Player.SIZE, Player.SIZE);
-        session.advancePlayerHurtAnimation();
     }
 
     private void drawFallingItems() {

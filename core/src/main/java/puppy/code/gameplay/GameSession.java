@@ -4,30 +4,39 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
 import puppy.code.model.FallingItem;
+import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
 public final class GameSession {
     private final Player player;
-    private final DropSpawner dropSpawner;
+    private final DropSource dropSource;
     private final List<FallingItem> fallingItems;
     private final List<FallingItem> readOnlyFallingItems;
 
     public GameSession() {
-        player = new Player();
-        dropSpawner = new DropSpawner();
+        this(new Player(), new DropSpawner());
+    }
+
+    GameSession(Player player, DropSource dropSource) {
+        this.player = Objects.requireNonNull(player, "player");
+        this.dropSource = Objects.requireNonNull(dropSource, "dropSource");
         fallingItems = new ArrayList<>();
         readOnlyFallingItems = Collections.unmodifiableList(fallingItems);
-        fallingItems.add(dropSpawner.createInitialDrop());
+        FallingItem initialDrop = dropSource.createInitialDrop();
+        if (initialDrop != null) {
+            fallingItems.add(initialDrop);
+        }
     }
 
     public UpdateResult update(float delta, boolean movingLeft, boolean movingRight) {
         if (player.isHurt()) {
-            return UpdateResult.noEvents();
+            return finishUpdate(UpdateResult.noEvents());
         }
 
         player.move(movingLeft, movingRight, delta);
-        FallingItem newItem = dropSpawner.createDropIfDue();
+        FallingItem newItem = dropSource.createDropIfDue();
         if (newItem != null) {
             fallingItems.add(newItem);
         }
@@ -45,18 +54,21 @@ public final class GameSession {
                 continue;
             }
 
-            item.applyTo(player);
+            events.addAll(item.applyTo(player));
             iterator.remove();
-            if (item.getType() == FallingItem.Type.GOOD) {
-                events.add(GameplayEvent.DROP_COLLECTED);
-            } else {
-                events.add(GameplayEvent.PLAYER_DAMAGED);
-                if (player.hasNoLives()) {
-                    return new UpdateResult(events, true);
-                }
+            if (player.hasNoLives()) {
+                return finishUpdate(new UpdateResult(events, true));
             }
         }
-        return events.isEmpty() ? UpdateResult.noEvents() : new UpdateResult(events, false);
+        UpdateResult result = events.isEmpty()
+                ? UpdateResult.noEvents()
+                : new UpdateResult(events, false);
+        return finishUpdate(result);
+    }
+
+    private UpdateResult finishUpdate(UpdateResult result) {
+        player.advanceHurtAnimation();
+        return result;
     }
 
     public int getScore() {
@@ -79,17 +91,8 @@ public final class GameSession {
         return player.isHurt();
     }
 
-    public void advancePlayerHurtAnimation() {
-        player.advanceHurtAnimation();
-    }
-
     public List<FallingItem> getFallingItems() {
         return readOnlyFallingItems;
-    }
-
-    public enum GameplayEvent {
-        DROP_COLLECTED,
-        PLAYER_DAMAGED
     }
 
     public static final class UpdateResult {
