@@ -2,16 +2,15 @@ package puppy.code.model;
 
 public final class BadDrop extends FallingItem {
     public BadDrop(float x, float y) {
-        super(x, y);
+        this(x, y, new DamageEffect());
+    }
+
+    public BadDrop(float x, float y, DropEffect effect) {
+        super(x, y, effect);
     }
 
     @Override
     public Type getType() {
         return Type.BAD;
-    }
-
-    @Override
-    public void applyTo(Player player) {
-        player.takeDamage();
     }
 }

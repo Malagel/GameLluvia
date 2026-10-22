@@ -1,6 +1,7 @@
 package puppy.code.model;
 
 import com.badlogic.gdx.math.Rectangle;
+import java.util.Objects;
 
 public abstract class FallingItem {
     public static final float SIZE = 48.0f;
@@ -8,9 +9,11 @@ public abstract class FallingItem {
     private static final float FALL_SPEED = 225.0f;
 
     private final Rectangle bounds;
+    private final DropEffect effect;
 
-    protected FallingItem(float x, float y) {
+    protected FallingItem(float x, float y, DropEffect effect) {
         bounds = new Rectangle(x, y, SIZE, SIZE);
+        this.effect = Objects.requireNonNull(effect, "effect");
     }
 
     public void fall(float delta) {
@@ -35,7 +38,9 @@ public abstract class FallingItem {
 
     public abstract Type getType();
 
-    public abstract void applyTo(Player player);
+    public final void applyTo(Player player) {
+        effect.apply(player);
+    }
 
     public enum Type {
         GOOD,
