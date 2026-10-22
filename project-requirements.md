@@ -158,6 +158,81 @@
   online leaderboards, and extra score metadata are also intentionally outside
   scope.
 
+## GM-8 — Template Method for UI screens (code implemented; UML pending)
+
+### Problem and architectural context
+
+- `MainMenuScreen`, `LeaderboardScreen`, and `GameOverScreen` repeated the same
+  Scene2D lifecycle: create a stage and `FitViewport`, apply the initial window size,
+  register and remove the input processor, clear/update/draw every frame, resize the
+  viewport, and dispose the stage. Maintaining these copies made a lifecycle fix
+  easy to omit from one screen and would have duplicated the same code again in a
+  future Options menu.
+- These three screens have the same rendering workflow and differ only in their UI
+  actors and callbacks, making Template Method a direct fit. `GameScreen` and
+  `PauseScreen` retain their separate rendering and interaction responsibilities and
+  deliberately remain outside this hierarchy.
+
+### Implemented solution and participants
+
+- `BaseUiScreen` is the abstract Template Method parent and extends LibGDX
+  `ScreenAdapter`. `MainMenuScreen`, `LeaderboardScreen`, and `GameOverScreen` are
+  the concrete participants. `ScreenUi` continues to supply their shared label and
+  button styles without taking on lifecycle responsibilities.
+- The parent creates a stage with the shared `GameAssets` batch and a 640x360
+  `FitViewport`. Its final `show`, `render`, `resize`, `hide`, and `dispose` methods
+  define the common algorithm: initialize screen content once, register input,
+  clear the frame, advance the stage with the existing capped delta, draw it, update
+  and center the viewport after resizing, unregister input only when the stage owns
+  it, and dispose the stage once.
+- Concrete screens override the protected `buildUi(Stage, GameAssets)` hook. The
+  main menu builds its title and four existing actions, the leaderboard builds its
+  saved top-five or empty state and return action, and game over builds its completed
+  score and retry/menu actions. Navigation remains delegated to `GameLluviaMenu`.
+- UI construction is lazy on first `show` (and defensively ensured by `render`), so
+  the abstract hook is never called from the base constructor before fields such as
+  the completed-game score have been initialized. Re-showing a screen does not add
+  its actors again, and attempting to render or resize an already disposed screen is
+  rejected.
+
+### Template Method, GRASP, and SOLID
+
+- The implementation is a Template Method rather than a shared-field superclass:
+  the abstract parent owns and fixes the lifecycle operations and calls the
+  variation hook at the defined initialization step. Marking the critical lifecycle
+  methods final prevents a concrete menu from silently bypassing input cleanup,
+  viewport handling, frame sequencing, or disposal.
+- **Information Expert / High Cohesion:** the base screen owns the lifecycle of its
+  stage, each concrete screen owns its particular presentation, `ScreenUi` owns
+  styling, and `GameLluviaMenu` remains the navigation controller.
+- **Low Coupling / Protected Variations:** concrete screens no longer depend on the
+  details of common Scene2D setup, while a future menu-style screen can vary only
+  the actor-building hook. The base uses the existing `GameAssets` boundary and does
+  not create or dispose shared resources.
+- **Single Responsibility and Open/Closed:** lifecycle changes now have one reason
+  and one place to change; another compatible UI screen can extend the template
+  without copying it. The narrow hook avoids speculative factories or additional
+  inheritance layers. Final workflow methods preserve substitutability and resource
+  invariants for all concrete screens.
+
+### Verification and remaining work
+
+- `BaseUiScreenTest` verifies one-time initialization, input registration and
+  conditional cleanup, capped stage update and drawing, centered viewport resizing,
+  idempotent stage disposal, non-disposal of shared assets, rejection of reuse after
+  disposal, final lifecycle methods, and participation of all three concrete UI
+  screens. The existing gameplay, Strategy, and Singleton tests remain in the same
+  suite.
+- Automated unit tests cannot validate the appearance of Scene2D widgets or perform
+  real desktop pointer interaction. Manual desktop verification should confirm the
+  unchanged labels and layout, every menu transition and exit action, empty and
+  populated leaderboards, retry/main-menu actions, and correct pointer coordinates
+  after resizing to different aspect ratios.
+- The code implementation for GM-8 is complete. The UML diagram required by the
+  academic GM-8 specification remains pending and is intentionally distinguished
+  from this completed refactor. The planned Options screen is also not implemented;
+  it can use `BaseUiScreen` when its requirements are defined.
+
 ## GM-5 — Encapsulation, GRASP, and SOLID (implemented)
 
 ### Problems identified and focused changes
