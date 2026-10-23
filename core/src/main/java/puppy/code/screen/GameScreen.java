@@ -1,7 +1,5 @@
 package puppy.code.screen;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -12,10 +10,12 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import java.util.Objects;
 import puppy.code.GameAssets;
 import puppy.code.GameConfig;
 import puppy.code.GameLluviaMenu;
 import puppy.code.gameplay.GameSession;
+import puppy.code.input.PlayerInput;
 import puppy.code.model.FallingItem;
 import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
@@ -25,15 +25,17 @@ public final class GameScreen extends ScreenAdapter {
     private final long gameId;
     private final GameAssets assets;
     private final GameSession session;
+    private final PlayerInput playerInput;
     private final SpriteBatch batch;
     private final BitmapFont font;
     private final OrthographicCamera camera;
     private final Viewport viewport;
     private final GlyphLayout layout;
 
-    public GameScreen(GameLluviaMenu game, long gameId) {
+    public GameScreen(GameLluviaMenu game, long gameId, PlayerInput playerInput) {
         this.game = game;
         this.gameId = gameId;
+        this.playerInput = Objects.requireNonNull(playerInput, "playerInput");
         assets = game.getAssets();
         session = new GameSession();
         batch = assets.getBatch();
@@ -54,8 +56,8 @@ public final class GameScreen extends ScreenAdapter {
 
         GameSession.UpdateResult result = session.update(
                 delta,
-                Gdx.input.isKeyPressed(Input.Keys.LEFT),
-                Gdx.input.isKeyPressed(Input.Keys.RIGHT));
+                playerInput.isMovingLeft(),
+                playerInput.isMovingRight());
         playEventSounds(result);
         drawPlayer();
         drawFallingItems();
