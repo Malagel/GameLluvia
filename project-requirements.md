@@ -422,3 +422,28 @@
 - The code-level GM-9 implementation is complete. The UML diagram required by the
   academic GM-9 specification remains pending and is intentionally not created in
   this iteration.
+
+## GM-5 follow-up — Player input separation (implemented)
+
+- **Problem:** `GameScreen` both presented the game and read the keyboard (arrow keys,
+  and later A/D). Control bindings were therefore mixed with rendering and audio, and
+  that behavior had no unit tests.
+- **Solution:** the `PlayerInput` interface (`isMovingLeft()`, `isMovingRight()`)
+  expresses the player's intent. `KeyboardPlayerInput` is the production
+  implementation: it reads an injected LibGDX `Input`, accepts several keys per
+  direction, and `standard(Input)` binds the arrow keys and A/D simultaneously.
+  `GameLluviaMenu` supplies it to `GameScreen`; `GameSession` and `Player` are unchanged.
+- **GRASP:** Information Expert and High Cohesion (key bindings live in one class),
+  Low Coupling and Protected Variations (`GameScreen` depends on an interface, not on
+  the keyboard), and Polymorphism (control schemes are interchangeable).
+- **SOLID:** Single Responsibility (the screen presents, the input class reads
+  controls), Open/Closed (a new device is a new implementation), Interface Segregation
+  (two methods only), and Dependency Inversion (`GameScreen` receives the abstraction
+  through its constructor).
+- **Verification:** `KeyboardPlayerInputTest` uses a mocked `Input` to cover each
+  scheme, mixed schemes, ignored keys, custom bindings, defensive copying, and null
+  arguments.
+- **Not included:** actions other than horizontal movement (pause, exit) and key
+  remapping are deliberately omitted until the game needs them.
+- **Report note (GM-1):** the controls to describe are left arrow or A (left) and right
+  arrow or D (right).
