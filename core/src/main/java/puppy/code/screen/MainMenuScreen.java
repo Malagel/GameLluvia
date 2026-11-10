@@ -43,8 +43,13 @@ public final class MainMenuScreen extends BaseUiScreen {
             }
         });
 
-        TextButton optionsButton = new TextButton("Opciones - Próximamente", buttonStyle);
-        optionsButton.setDisabled(true);
+        TextButton optionsButton = new TextButton("Opciones", buttonStyle);
+        optionsButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                getGame().showOptions();
+            }
+        });
 
         TextButton exitButton = new TextButton("Salir", buttonStyle);
         exitButton.addListener(new ClickListener() {

@@ -8,8 +8,11 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
+import java.util.Objects;
+import puppy.code.settings.AudioSettings;
 
 public final class GameAssets implements Disposable {
+    private final AudioSettings audioSettings;
     private final SpriteBatch batch;
     private final BitmapFont font;
     private final Texture playerTexture;
@@ -20,7 +23,8 @@ public final class GameAssets implements Disposable {
     private final Sound hurtSound;
     private final Music rainMusic;
 
-    public GameAssets() {
+    public GameAssets(AudioSettings audioSettings) {
+        this.audioSettings = Objects.requireNonNull(audioSettings, "audioSettings");
         batch = new SpriteBatch();
         font = new BitmapFont();
         font.getData().setScale(1.5f);
@@ -63,14 +67,15 @@ public final class GameAssets implements Disposable {
     }
 
     public void playCollectSound() {
-        collectSound.play();
+        collectSound.play(audioSettings.getEffectsVolume());
     }
 
     public void playHurtSound() {
-        hurtSound.play();
+        hurtSound.play(audioSettings.getEffectsVolume());
     }
 
     public void playRainMusic() {
+        rainMusic.setVolume(audioSettings.getMusicVolume());
         rainMusic.play();
     }
 
