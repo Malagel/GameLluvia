@@ -14,13 +14,14 @@ public class GameLluviaMenu extends Game {
     private static final String SCORE_PREFERENCES = "game-lluvia-high-scores";
 
     private GameAssets assets;
-    private HighScoreManager highScoreManager;
     private long nextGameId;
 
     @Override
     public void create() {
         assets = new GameAssets();
-        highScoreManager = HighScoreManager.initialize(
+        // The singleton is created once here, the only place that knows how scores are stored.
+        // From then on every screen reaches it through HighScoreManager.getInstance().
+        HighScoreManager.initialize(
                 new PreferencesScoreStore(com.badlogic.gdx.Gdx.app.getPreferences(SCORE_PREFERENCES)));
         setScreen(new MainMenuScreen(this));
     }
@@ -29,16 +30,12 @@ public class GameLluviaMenu extends Game {
         return assets;
     }
 
-    public HighScoreManager getHighScoreManager() {
-        return highScoreManager;
-    }
-
     public void startGame() {
         replaceScreen(new GameScreen(this, ++nextGameId));
     }
 
     public void showGameOver(long completedGameId, int score) {
-        highScoreManager.recordScore(completedGameId, score);
+        HighScoreManager.getInstance().recordScore(completedGameId, score);
         replaceScreen(new GameOverScreen(this, score));
     }
 

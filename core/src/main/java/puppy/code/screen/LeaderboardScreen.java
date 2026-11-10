@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import java.util.List;
 import puppy.code.GameAssets;
 import puppy.code.GameLluviaMenu;
+import puppy.code.score.HighScoreManager;
 
 public final class LeaderboardScreen extends BaseUiScreen {
     public LeaderboardScreen(GameLluviaMenu game) {
@@ -29,7 +30,7 @@ public final class LeaderboardScreen extends BaseUiScreen {
         content.add(title).padBottom(18.0f);
         content.row();
 
-        List<Integer> scores = getGame().getHighScoreManager().getScores();
+        List<Integer> scores = HighScoreManager.getInstance().getScores();
         if (scores.isEmpty()) {
             content.add(new Label("Aún no hay puntuaciones.", labelStyle)).padBottom(20.0f);
             content.row();
