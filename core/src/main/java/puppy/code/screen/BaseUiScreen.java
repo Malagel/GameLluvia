@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import java.util.Objects;
@@ -14,9 +15,9 @@ import puppy.code.GameLluviaMenu;
 /**
  * Defines the common Scene2D lifecycle for menu-style screens.
  *
- * <p>Subclasses provide only their actors in {@link #buildUi(Stage, GameAssets)}. The hook is
+ * <p>Subclasses provide only their actors in {@link #buildUi(Table, ScreenUi)}. The hook is
  * invoked lazily, after the concrete constructor has completed, while this class retains control
- * of the screen lifecycle.</p>
+ * of the screen lifecycle, the root layout container, and the shared widget styles.</p>
  */
 public abstract class BaseUiScreen extends ScreenAdapter {
     private static final float MAX_FRAME_DELTA = 1.0f / 30.0f;
@@ -46,7 +47,11 @@ public abstract class BaseUiScreen extends ScreenAdapter {
                 assets.getBatch());
     }
 
-    protected abstract void buildUi(Stage stage, GameAssets assets);
+    /**
+     * Fills the screen's centred root table. The root is created, sized to the stage, and
+     * added to it by this class; {@code ui} creates the shared styled widgets.
+     */
+    protected abstract void buildUi(Table root, ScreenUi ui);
 
     protected final GameLluviaMenu getGame() {
         return game;
@@ -90,7 +95,10 @@ public abstract class BaseUiScreen extends ScreenAdapter {
     private void initializeUi() {
         requireActive();
         if (!uiInitialized) {
-            buildUi(stage, game.getAssets());
+            Table root = new Table();
+            root.setFillParent(true);
+            buildUi(root, new ScreenUi(game.getAssets()));
+            stage.addActor(root);
             uiInitialized = true;
         }
     }

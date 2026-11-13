@@ -1,6 +1,6 @@
 # GameLluvia
 
-GameLluvia es un juego de escritorio en el que el jugador mueve un balde para recoger las gotas beneficiosas que caen mientras evita las perjudiciales. El objetivo es conseguir la mayor cantidad de puntos posible antes de perder las tres vidas.
+GameLluvia es un juego de escritorio en el que el jugador mueve un balde para recoger las gotas beneficiosas que caen mientras evita las perjudiciales. Las gotas perjudiciales (rojas) son arrastradas por el viento y oscilan de lado a lado al caer, por lo que esquivarlas exige atención. Al alcanzar 300 puntos la lluvia se convierte en tormenta: el cielo se oscurece, caen gotas con más frecuencia y cada gota beneficiosa vale el doble (20 puntos) hasta el final de la partida. El objetivo es conseguir la mayor cantidad de puntos posible antes de perder las tres vidas.
 
 El proyecto utiliza Java 11, LibGDX y Gradle. Sus módulos principales son:
 

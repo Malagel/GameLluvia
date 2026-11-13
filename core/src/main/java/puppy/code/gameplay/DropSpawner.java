@@ -6,10 +6,14 @@ import java.util.Random;
 import java.util.function.LongSupplier;
 import puppy.code.GameConfig;
 import puppy.code.model.BadDrop;
+import puppy.code.model.DropEffect;
 import puppy.code.model.FallingItem;
 import puppy.code.model.GoodDrop;
+import puppy.code.model.ScoreEffect;
 
 public final class DropSpawner implements DropSource {
+    static final int STORM_DROP_POINTS = 20;
+
     private final DropSpawnProfile profile;
     private final Random random;
     private final LongSupplier nanoTime;
@@ -29,10 +33,25 @@ public final class DropSpawner implements DropSource {
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
+    /** Calm rain: one drop every 100 ms, 60% beneficial (10 points) and 40% harmful. */
     public static DropSpawnProfile standardProfile() {
         return DropSpawnProfile.builder()
                 .spawnIntervalMillis(100L)
                 .addDrop(6, GoodDrop::new)
+                .addDrop(4, BadDrop::new)
+                .build();
+    }
+
+    /**
+     * Storm: denser rain (one drop every 75 ms) with the same 60/40 proportion, in which
+     * beneficial drops are created with a non-default strategy worth double points. The
+     * strategy is chosen here, when each drop is created, and stays fixed for its lifetime.
+     */
+    public static DropSpawnProfile stormProfile() {
+        DropEffect doubleReward = new ScoreEffect(STORM_DROP_POINTS);
+        return DropSpawnProfile.builder()
+                .spawnIntervalMillis(75L)
+                .addDrop(6, (x, y) -> new GoodDrop(x, y, doubleReward))
                 .addDrop(4, BadDrop::new)
                 .build();
     }

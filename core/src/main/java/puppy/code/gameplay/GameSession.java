@@ -9,22 +9,34 @@ import puppy.code.model.FallingItem;
 import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
+/**
+ * Gameplay controller for one game. Besides moving the player, spawning, and resolving
+ * collisions, it decides when the calm rain turns into a storm: once the score reaches
+ * {@link #STORM_SCORE}, new drops come from the storm source for the rest of the game.
+ */
 public final class GameSession {
+    static final int STORM_SCORE = 300;
+
     private final Player player;
-    private final DropSource dropSource;
+    private final DropSource calmRain;
+    private final DropSource stormRain;
     private final List<FallingItemView> fallingItems;
     private final List<FallingItemView> readOnlyFallingItems;
+    private boolean stormActive;
 
     public GameSession() {
-        this(new Player(), new DropSpawner());
+        this(new Player(),
+                new DropSpawner(DropSpawner.standardProfile()),
+                new DropSpawner(DropSpawner.stormProfile()));
     }
 
-    GameSession(Player player, DropSource dropSource) {
+    GameSession(Player player, DropSource calmRain, DropSource stormRain) {
         this.player = Objects.requireNonNull(player, "player");
-        this.dropSource = Objects.requireNonNull(dropSource, "dropSource");
+        this.calmRain = Objects.requireNonNull(calmRain, "calmRain");
+        this.stormRain = Objects.requireNonNull(stormRain, "stormRain");
         fallingItems = new ArrayList<>();
         readOnlyFallingItems = Collections.unmodifiableList(fallingItems);
-        FallingItem initialDrop = dropSource.createInitialDrop();
+        FallingItem initialDrop = calmRain.createInitialDrop();
         if (initialDrop != null) {
             addFallingItem(initialDrop);
         }
@@ -36,12 +48,14 @@ public final class GameSession {
         }
 
         player.move(movingLeft, movingRight, delta);
-        FallingItem newItem = dropSource.createDropIfDue();
+        DropSource activeRain = stormActive ? stormRain : calmRain;
+        FallingItem newItem = activeRain.createDropIfDue();
         if (newItem != null) {
             addFallingItem(newItem);
         }
 
-        List<GameplayEvent> events = new ArrayList<>();
+        // Allocated only on a collision: most frames produce no events.
+        List<GameplayEvent> events = null;
         ListIterator<FallingItemView> iterator = fallingItems.listIterator();
         while (iterator.hasNext()) {
             FallingItem item = iterator.next().item;
@@ -54,13 +68,19 @@ public final class GameSession {
                 continue;
             }
 
+            if (events == null) {
+                events = new ArrayList<>();
+            }
             events.addAll(item.applyTo(player));
             iterator.remove();
             if (player.hasNoLives()) {
                 return finishUpdate(new UpdateResult(events, true));
             }
         }
-        UpdateResult result = events.isEmpty()
+        if (!stormActive && player.getScore() >= STORM_SCORE) {
+            stormActive = true;
+        }
+        UpdateResult result = events == null || events.isEmpty()
                 ? UpdateResult.noEvents()
                 : new UpdateResult(events, false);
         return finishUpdate(result);
@@ -93,6 +113,10 @@ public final class GameSession {
 
     public boolean isPlayerHurt() {
         return player.isHurt();
+    }
+
+    public boolean isStormActive() {
+        return stormActive;
     }
 
     public List<FallingItemView> getFallingItems() {
@@ -129,8 +153,12 @@ public final class GameSession {
         private final List<GameplayEvent> events;
         private final boolean gameOver;
 
+        /**
+         * Takes ownership of {@code events}: the session builds a new list for each result
+         * and never keeps a reference, so a read-only view is enough and no copy is made.
+         */
         private UpdateResult(List<GameplayEvent> events, boolean gameOver) {
-            this.events = Collections.unmodifiableList(new ArrayList<>(events));
+            this.events = Collections.unmodifiableList(events);
             this.gameOver = gameOver;
         }
 

@@ -80,6 +80,20 @@ class GameSessionTest {
     }
 
     @Test
+    void framesWithoutCollisionsReportNoEventsThroughAReadOnlyResult() {
+        Player player = new Player();
+        GameSession session = sessionWith(player, new BadDrop(0.0f, 300.0f));
+
+        GameSession.UpdateResult result = session.update(0.016f, false, false);
+
+        assertTrue(result.getEvents().isEmpty());
+        assertFalse(result.isGameOver());
+        assertThrows(UnsupportedOperationException.class,
+                () -> result.getEvents().add(GameplayEvent.PLAYER_DAMAGED));
+        assertEquals(3, session.getLives());
+    }
+
+    @Test
     void fallingItemsAreExposedAsReusableReadOnlyProjections() {
         Player player = new Player();
         GameSession session = sessionWith(player, new GoodDrop(0.0f, 100.0f));
@@ -97,12 +111,53 @@ class GameSessionTest {
         assertThrows(UnsupportedOperationException.class, items::clear);
     }
 
+    @Test
+    void reachingTheStormScoreSwitchesNewDropsToTheStormSource() {
+        Player player = new Player();
+        player.addScore(GameSession.STORM_SCORE - 10);
+        FixedDropSource calm = new FixedDropSource(new GoodDrop(player.getX(), player.getY()));
+        FixedDropSource storm = new FixedDropSource(null);
+        GameSession session = new GameSession(player, calm, storm);
+
+        session.update(0.0f, false, false);
+
+        assertEquals(GameSession.STORM_SCORE, session.getScore());
+        assertTrue(session.isStormActive());
+        assertEquals(1, calm.dueRequests);
+        assertEquals(0, storm.dueRequests);
+
+        session.update(0.0f, false, false);
+        session.update(0.0f, false, false);
+
+        assertTrue(session.isStormActive());
+        assertEquals(1, calm.dueRequests);
+        assertEquals(2, storm.dueRequests);
+    }
+
+    @Test
+    void theRainStaysCalmBelowTheStormScore() {
+        Player player = new Player();
+        player.addScore(GameSession.STORM_SCORE - 20);
+        FixedDropSource calm = new FixedDropSource(new GoodDrop(player.getX(), player.getY()));
+        FixedDropSource storm = new FixedDropSource(null);
+        GameSession session = new GameSession(player, calm, storm);
+
+        session.update(0.0f, false, false);
+        session.update(0.0f, false, false);
+
+        assertEquals(GameSession.STORM_SCORE - 10, session.getScore());
+        assertFalse(session.isStormActive());
+        assertEquals(2, calm.dueRequests);
+        assertEquals(0, storm.dueRequests);
+    }
+
     private GameSession sessionWith(Player player, FallingItem initialDrop) {
-        return new GameSession(player, new FixedDropSource(initialDrop));
+        return new GameSession(player, new FixedDropSource(initialDrop), new FixedDropSource(null));
     }
 
     private static final class FixedDropSource implements DropSource {
         private final FallingItem initialDrop;
+        private int dueRequests;
 
         private FixedDropSource(FallingItem initialDrop) {
             this.initialDrop = initialDrop;
@@ -115,6 +170,7 @@ class GameSessionTest {
 
         @Override
         public FallingItem createDropIfDue() {
+            dueRequests++;
             return null;
         }
     }

@@ -30,7 +30,11 @@ public final class DropSpawnProfile {
         return spawnIntervalMillis;
     }
 
-    public List<DropRegistration> getDrops() {
+    /**
+     * Read-only, immutable registrations. Only {@link DropSpawner} needs them, so they are
+     * not part of the public API: callers configure profiles through the {@link Builder}.
+     */
+    List<DropRegistration> getDrops() {
         return drops;
     }
 
@@ -47,7 +51,7 @@ public final class DropSpawnProfile {
         FallingItem create(float x, float y);
     }
 
-    public static final class DropRegistration {
+    static final class DropRegistration {
         private final int weight;
         private final DropFactory factory;
 
@@ -56,7 +60,7 @@ public final class DropSpawnProfile {
             this.factory = factory;
         }
 
-        public int getWeight() {
+        int getWeight() {
             return weight;
         }
 

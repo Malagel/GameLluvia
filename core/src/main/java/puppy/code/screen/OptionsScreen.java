@@ -1,11 +1,7 @@
 package puppy.code.screen;
 
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import java.util.function.IntSupplier;
 import puppy.code.GameAssets;
@@ -26,23 +22,16 @@ public final class OptionsScreen extends BaseUiScreen {
     }
 
     @Override
-    protected void buildUi(Stage stage, GameAssets assets) {
-        Label.LabelStyle labelStyle = ScreenUi.labelStyle(assets.getFont());
-        TextButton.TextButtonStyle buttonStyle =
-                ScreenUi.buttonStyle(assets.getFont(), assets.getUiTexture());
+    protected void buildUi(Table root, ScreenUi ui) {
         AudioSettings settings = getGame().getAudioSettings();
+        GameAssets assets = getGame().getAssets();
 
-        Label title = new Label("Opciones", labelStyle);
-        title.setFontScale(1.5f);
+        root.add(ui.title("Opciones")).colspan(4).padBottom(24.0f);
+        root.row();
 
-        Table content = new Table();
-        content.setFillParent(true);
-        content.add(title).colspan(4).padBottom(24.0f);
-        content.row();
-
-        addVolumeRow(content, "Música", settings::getMusicPercent,
-                settings::decreaseMusic, settings::increaseMusic, labelStyle, buttonStyle);
-        addVolumeRow(content, "Efectos", settings::getEffectsPercent,
+        addVolumeRow(root, ui, "Música", settings::getMusicPercent,
+                settings::decreaseMusic, settings::increaseMusic);
+        addVolumeRow(root, ui, "Efectos", settings::getEffectsPercent,
                 () -> {
                     settings.decreaseEffects();
                     assets.playCollectSound();
@@ -50,56 +39,37 @@ public final class OptionsScreen extends BaseUiScreen {
                 () -> {
                     settings.increaseEffects();
                     assets.playCollectSound();
-                },
-                labelStyle, buttonStyle);
+                });
 
-        TextButton backButton = new TextButton("Volver", buttonStyle);
-        backButton.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                getGame().showMainMenu();
-            }
-        });
-        content.add(backButton).colspan(4).width(220.0f).height(48.0f).padTop(24.0f);
-        stage.addActor(content);
+        root.add(ui.button("Volver", getGame()::showMainMenu))
+                .colspan(4)
+                .width(ScreenUi.BACK_BUTTON_WIDTH)
+                .height(ScreenUi.BUTTON_HEIGHT)
+                .padTop(24.0f);
     }
 
     private static void addVolumeRow(
             Table table,
+            ScreenUi ui,
             String name,
             IntSupplier currentPercent,
             Runnable decrease,
-            Runnable increase,
-            Label.LabelStyle labelStyle,
-            TextButton.TextButtonStyle buttonStyle) {
-        Label valueLabel = new Label(formatPercent(currentPercent.getAsInt()), labelStyle);
+            Runnable increase) {
+        Label valueLabel = ui.label(formatPercent(currentPercent.getAsInt()));
         valueLabel.setAlignment(Align.center);
+        Runnable refresh = () -> valueLabel.setText(formatPercent(currentPercent.getAsInt()));
 
-        TextButton decreaseButton = stepButton("-", buttonStyle, decrease, valueLabel, currentPercent);
-        TextButton increaseButton = stepButton("+", buttonStyle, increase, valueLabel, currentPercent);
-
-        table.add(new Label(name, labelStyle)).width(NAME_WIDTH).left();
-        table.add(decreaseButton).size(STEP_BUTTON_SIZE).pad(4.0f);
+        table.add(ui.label(name)).width(NAME_WIDTH).left();
+        table.add(ui.button("-", () -> {
+            decrease.run();
+            refresh.run();
+        })).size(STEP_BUTTON_SIZE).pad(4.0f);
         table.add(valueLabel).width(VALUE_WIDTH);
-        table.add(increaseButton).size(STEP_BUTTON_SIZE).pad(4.0f);
+        table.add(ui.button("+", () -> {
+            increase.run();
+            refresh.run();
+        })).size(STEP_BUTTON_SIZE).pad(4.0f);
         table.row();
-    }
-
-    private static TextButton stepButton(
-            String text,
-            TextButton.TextButtonStyle style,
-            Runnable action,
-            Label valueLabel,
-            IntSupplier currentPercent) {
-        TextButton button = new TextButton(text, style);
-        button.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                action.run();
-                valueLabel.setText(formatPercent(currentPercent.getAsInt()));
-            }
-        });
-        return button;
     }
 
     private static String formatPercent(int percent) {

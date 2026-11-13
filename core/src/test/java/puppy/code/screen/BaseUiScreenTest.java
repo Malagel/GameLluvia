@@ -1,19 +1,24 @@
 package puppy.code.screen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -36,8 +41,11 @@ class BaseUiScreenTest {
         Gdx.input = input;
         Gdx.gl = mock(GL20.class);
         Gdx.gl20 = Gdx.gl;
+        // Scene2D table cells cache their defaults per Gdx.files instance.
+        Gdx.files = mock(Files.class);
 
         assets = mock(GameAssets.class);
+        when(assets.getUiTexture()).thenReturn(mock(Texture.class));
         GameLluviaMenu game = mock(GameLluviaMenu.class);
         when(game.getAssets()).thenReturn(assets);
 
@@ -52,6 +60,7 @@ class BaseUiScreenTest {
         Gdx.input = null;
         Gdx.gl = null;
         Gdx.gl20 = null;
+        Gdx.files = null;
     }
 
     @Test
@@ -61,6 +70,17 @@ class BaseUiScreenTest {
 
         assertEquals(1, screen.buildCount);
         verify(input, times(2)).setInputProcessor(stage);
+    }
+
+    @Test
+    void templateSuppliesOneRootTableAndSharedWidgetKit() {
+        screen.show();
+        screen.render(0.016f);
+
+        assertNotNull(screen.receivedRoot);
+        assertNotNull(screen.receivedUi);
+        verify(stage, times(1)).addActor(any());
+        verify(stage).addActor(screen.receivedRoot);
     }
 
     @Test
@@ -124,6 +144,7 @@ class BaseUiScreenTest {
         assertEquals(BaseUiScreen.class, MainMenuScreen.class.getSuperclass());
         assertEquals(BaseUiScreen.class, LeaderboardScreen.class.getSuperclass());
         assertEquals(BaseUiScreen.class, GameOverScreen.class.getSuperclass());
+        assertEquals(BaseUiScreen.class, OptionsScreen.class.getSuperclass());
     }
 
     private static void assertFinal(String name, Class<?>... parameterTypes)
@@ -134,14 +155,18 @@ class BaseUiScreenTest {
 
     private static final class TestUiScreen extends BaseUiScreen {
         private int buildCount;
+        private Table receivedRoot;
+        private ScreenUi receivedUi;
 
         private TestUiScreen(GameLluviaMenu game, Stage stage) {
             super(game, stage);
         }
 
         @Override
-        protected void buildUi(Stage stage, GameAssets assets) {
+        protected void buildUi(Table root, ScreenUi ui) {
             buildCount++;
+            receivedRoot = root;
+            receivedUi = ui;
         }
     }
 }
