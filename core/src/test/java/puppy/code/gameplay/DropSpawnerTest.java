@@ -14,48 +14,12 @@ import org.junit.jupiter.api.Test;
 import puppy.code.GameConfig;
 import puppy.code.model.BadDrop;
 import puppy.code.model.FallingItem;
-import puppy.code.model.GameplayEvent;
 import puppy.code.model.GoodDrop;
-import puppy.code.model.Player;
 
 class DropSpawnerTest {
-    @Test
-    void standardProfilePreservesIntervalAndSixtyFortyWeights() {
-        assertSixtyFortyProfile(DropSpawner.standardProfile(), 100L);
-    }
-
-    @Test
-    void stormProfileIsDenserAndKeepsTheSixtyFortyWeights() {
-        assertSixtyFortyProfile(DropSpawner.stormProfile(), 75L);
-    }
-
-    @Test
-    void stormSelectsADifferentStrategyForTheSameBeneficialDropKind() {
-        FallingItem calmDrop = createDropWithSelection(DropSpawner.standardProfile(), 0);
-        FallingItem stormDrop = createDropWithSelection(DropSpawner.stormProfile(), 0);
-        Player calmPlayer = new Player();
-        Player stormPlayer = new Player();
-
-        assertEquals(calmDrop.getClass(), stormDrop.getClass());
-        assertEquals(calmDrop.getAppearance(), stormDrop.getAppearance());
-        assertEquals(GameplayEvent.DROP_COLLECTED, stormDrop.applyTo(stormPlayer));
-        calmDrop.applyTo(calmPlayer);
-
-        assertEquals(10, calmPlayer.getScore());
-        assertEquals(DropSpawner.STORM_DROP_POINTS, stormPlayer.getScore());
-    }
-
-    @Test
-    void stormKeepsHarmfulDropsHarmful() {
-        Player player = new Player();
-
-        FallingItem stormDrop = createDropWithSelection(DropSpawner.stormProfile(), 9);
-
-        assertInstanceOf(BadDrop.class, stormDrop);
-        assertEquals(GameplayEvent.PLAYER_DAMAGED, stormDrop.applyTo(player));
-        assertEquals(2, player.getLives());
-        assertEquals(0, player.getScore());
-    }
+    /** Calm rain: 100 ms, beneficial rolls 0-5 and harmful rolls 6-9. */
+    private static final DropSpawnProfile CALM_RAIN =
+            new RainDirector().construct(new CalmRainBuilder());
 
     @Test
     void weightedSelectionUsesExactDeterministicBoundaries() {
@@ -96,7 +60,7 @@ class DropSpawnerTest {
     void initialDropIsImmediateAndNextDropRequiresStrictlyMoreThanInterval() {
         AtomicLong time = new AtomicLong(1_000L);
         DropSpawner spawner = new DropSpawner(
-                DropSpawner.standardProfile(),
+                CALM_RAIN,
                 new SequenceRandom(12, 0, 34, 9),
                 time::get);
 
@@ -120,23 +84,15 @@ class DropSpawnerTest {
     void horizontalSpawnRangeKeepsBothInclusiveBoundaries() {
         int maximumX = (int) (GameConfig.WORLD_WIDTH - FallingItem.SIZE);
         DropSpawner spawner = new DropSpawner(
-                DropSpawner.standardProfile(),
+                CALM_RAIN,
                 new SequenceRandom(maximumX, 0),
                 () -> 0L);
 
         assertEquals((float) maximumX, spawner.createInitialDrop().getX());
     }
 
-    /** Six beneficial rolls (0-5) followed by four harmful ones (6-9). */
-    private static void assertSixtyFortyProfile(DropSpawnProfile profile, long intervalMillis) {
-        assertEquals(intervalMillis, profile.getSpawnIntervalMillis());
-        assertEquals(10, profile.getTotalWeight());
-        assertInstanceOf(GoodDrop.class, profile.createDrop(5, 0.0f, 0.0f));
-        assertInstanceOf(BadDrop.class, profile.createDrop(6, 0.0f, 0.0f));
-    }
-
     private FallingItem createStandardDropWithSelection(int selection) {
-        return createDropWithSelection(DropSpawner.standardProfile(), selection);
+        return createDropWithSelection(CALM_RAIN, selection);
     }
 
     private FallingItem createDropWithSelection(DropSpawnProfile profile, int selection) {

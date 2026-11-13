@@ -45,9 +45,10 @@ public final class GameSession {
     }
 
     private static Map<Weather, DropSource> standardRain() {
+        RainDirector director = new RainDirector();
         Map<Weather, DropSource> rain = new EnumMap<>(Weather.class);
-        rain.put(Weather.CALM, new DropSpawner(DropSpawner.standardProfile()));
-        rain.put(Weather.STORM, new DropSpawner(DropSpawner.stormProfile()));
+        rain.put(Weather.CALM, new DropSpawner(director.construct(new CalmRainBuilder())));
+        rain.put(Weather.STORM, new DropSpawner(director.construct(new StormRainBuilder())));
         return rain;
     }
 
