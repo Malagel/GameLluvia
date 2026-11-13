@@ -37,7 +37,7 @@ class DropSpawnerTest {
         Player stormPlayer = new Player();
 
         assertEquals(calmDrop.getClass(), stormDrop.getClass());
-        assertEquals(calmDrop.getType(), stormDrop.getType());
+        assertEquals(calmDrop.getAppearance(), stormDrop.getAppearance());
         assertEquals(GameplayEvent.DROP_COLLECTED, stormDrop.applyTo(stormPlayer));
         calmDrop.applyTo(calmPlayer);
 

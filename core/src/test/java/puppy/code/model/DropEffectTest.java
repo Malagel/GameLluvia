@@ -1,6 +1,7 @@
 package puppy.code.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,7 @@ class DropEffectTest {
         Player player = new Player();
         FallingItem visuallyGoodItem = new GoodDrop(0.0f, 0.0f, new DamageEffect());
 
-        assertEquals(FallingItem.Type.GOOD, visuallyGoodItem.getType());
+        assertSame(GoodDrop.APPEARANCE, visuallyGoodItem.getAppearance());
         assertEquals(GameplayEvent.PLAYER_DAMAGED, visuallyGoodItem.applyTo(player));
         assertEquals(2, player.getLives());
         assertEquals(0, player.getScore());

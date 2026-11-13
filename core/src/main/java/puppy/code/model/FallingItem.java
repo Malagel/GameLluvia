@@ -64,7 +64,10 @@ public abstract class FallingItem {
         return bounds.y;
     }
 
-    public abstract Type getType();
+    /**
+     * The visual identity of this kind of item, declared by each subclass.
+     */
+    public abstract DropAppearance getAppearance();
 
     /**
      * Applies this item's strategy to the player and returns the single outcome it caused.
@@ -73,10 +76,5 @@ public abstract class FallingItem {
         return Objects.requireNonNull(
                 effect.apply(Objects.requireNonNull(player, "player")),
                 "effect event");
-    }
-
-    public enum Type {
-        GOOD,
-        BAD
     }
 }

@@ -6,6 +6,8 @@ package puppy.code.model;
  * be told apart from beneficial drops by its motion as well as its colour.
  */
 public final class BadDrop extends FallingItem {
+    public static final DropAppearance APPEARANCE = new DropAppearance("harmful drop");
+
     // Strategies are immutable, so every default drop can share one instance.
     private static final DropEffect DEFAULT_EFFECT = new DamageEffect();
 
@@ -23,8 +25,8 @@ public final class BadDrop extends FallingItem {
     }
 
     @Override
-    public Type getType() {
-        return Type.BAD;
+    public DropAppearance getAppearance() {
+        return APPEARANCE;
     }
 
     /**

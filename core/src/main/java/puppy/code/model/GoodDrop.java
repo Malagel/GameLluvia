@@ -5,6 +5,8 @@ package puppy.code.model;
  * points unless a different strategy is selected when it is created.
  */
 public final class GoodDrop extends FallingItem {
+    public static final DropAppearance APPEARANCE = new DropAppearance("beneficial drop");
+
     private static final int SCORE_VALUE = 10;
     // Strategies are immutable, so every default drop can share one instance.
     private static final DropEffect DEFAULT_EFFECT = new ScoreEffect(SCORE_VALUE);
@@ -18,7 +20,7 @@ public final class GoodDrop extends FallingItem {
     }
 
     @Override
-    public Type getType() {
-        return Type.GOOD;
+    public DropAppearance getAppearance() {
+        return APPEARANCE;
     }
 }

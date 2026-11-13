@@ -1,48 +1,53 @@
 package puppy.code.gameplay;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Objects;
 import puppy.code.model.FallingItem;
 import puppy.code.model.Player;
 
 /**
  * Gameplay controller for one game. Besides moving the player, spawning, and resolving
- * collisions, it decides when the calm rain turns into a storm: once the score reaches
- * {@link #STORM_SCORE}, new drops come from the storm source for the rest of the game.
+ * collisions, it keeps the current {@link Weather}: new drops come from the rain source of
+ * that phase, so reaching the storm score switches the game to the storm source.
  *
  * <p>The session never hands out its collections. Outcomes are pushed to a
  * {@link GameplayListener} as they happen, and active items are visited through a
- * {@link FallingItemConsumer} that receives only their type and position.</p>
+ * {@link FallingItemConsumer} that receives only their appearance and position.</p>
  */
 public final class GameSession {
-    static final int STORM_SCORE = 300;
-
     private final Player player;
-    private final DropSource calmRain;
-    private final DropSource stormRain;
+    private final Map<Weather, DropSource> rainByWeather;
     private final GameplayListener listener;
     private final List<FallingItem> fallingItems = new ArrayList<>();
-    private boolean stormActive;
+    private Weather weather = Weather.CALM;
 
     public GameSession(GameplayListener listener) {
-        this(new Player(),
-                new DropSpawner(DropSpawner.standardProfile()),
-                new DropSpawner(DropSpawner.stormProfile()),
-                listener);
+        this(new Player(), standardRain(), listener);
     }
 
-    GameSession(Player player, DropSource calmRain, DropSource stormRain,
+    GameSession(Player player, Map<Weather, DropSource> rainByWeather,
             GameplayListener listener) {
         this.player = Objects.requireNonNull(player, "player");
-        this.calmRain = Objects.requireNonNull(calmRain, "calmRain");
-        this.stormRain = Objects.requireNonNull(stormRain, "stormRain");
+        this.rainByWeather = new EnumMap<>(Objects.requireNonNull(rainByWeather, "rainByWeather"));
+        for (Weather phase : Weather.values()) {
+            Objects.requireNonNull(this.rainByWeather.get(phase), "rain source for " + phase);
+        }
         this.listener = Objects.requireNonNull(listener, "listener");
-        FallingItem initialDrop = calmRain.createInitialDrop();
+        FallingItem initialDrop = this.rainByWeather.get(weather).createInitialDrop();
         if (initialDrop != null) {
             fallingItems.add(initialDrop);
         }
+    }
+
+    private static Map<Weather, DropSource> standardRain() {
+        Map<Weather, DropSource> rain = new EnumMap<>(Weather.class);
+        rain.put(Weather.CALM, new DropSpawner(DropSpawner.standardProfile()));
+        rain.put(Weather.STORM, new DropSpawner(DropSpawner.stormProfile()));
+        return rain;
     }
 
     public void update(float delta, boolean movingLeft, boolean movingRight) {
@@ -54,8 +59,7 @@ public final class GameSession {
 
     private void advanceGameplay(float delta, boolean movingLeft, boolean movingRight) {
         player.move(movingLeft, movingRight, delta);
-        DropSource activeRain = stormActive ? stormRain : calmRain;
-        FallingItem newItem = activeRain.createDropIfDue();
+        FallingItem newItem = rainByWeather.get(weather).createDropIfDue();
         if (newItem != null) {
             fallingItems.add(newItem);
         }
@@ -78,9 +82,7 @@ public final class GameSession {
                 return;
             }
         }
-        if (!stormActive && player.getScore() >= STORM_SCORE) {
-            stormActive = true;
-        }
+        weather = Weather.forScore(player.getScore());
     }
 
     /**
@@ -90,12 +92,16 @@ public final class GameSession {
         Objects.requireNonNull(consumer, "consumer");
         for (int index = 0; index < fallingItems.size(); index++) {
             FallingItem item = fallingItems.get(index);
-            consumer.accept(item.getType(), item.getX(), item.getY());
+            consumer.accept(item.getAppearance(), item.getX(), item.getY());
         }
     }
 
     public boolean isGameOver() {
         return player.hasNoLives();
+    }
+
+    public Weather getWeather() {
+        return weather;
     }
 
     public int getScore() {
@@ -116,9 +122,5 @@ public final class GameSession {
 
     public boolean isPlayerHurt() {
         return player.isHurt();
-    }
-
-    public boolean isStormActive() {
-        return stormActive;
     }
 }
