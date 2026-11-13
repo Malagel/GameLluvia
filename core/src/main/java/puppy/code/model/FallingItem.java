@@ -1,15 +1,26 @@
 package puppy.code.model;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import puppy.code.GameConfig;
 
+/**
+ * Something that falls from the sky and can be caught by the player.
+ *
+ * <p>The two axes of variation use different mechanisms on purpose. What happens when the
+ * item is caught is composed through a {@link DropEffect} strategy, so it can be chosen per
+ * item at creation time. How the item moves is intrinsic to its kind, so subclasses vary it
+ * through the {@link #horizontalDrift(float)} hook of the {@link #fall(float)} template.</p>
+ */
 public abstract class FallingItem {
     public static final float SIZE = 48.0f;
 
     private static final float FALL_SPEED = 225.0f;
+    private static final float MAX_X = GameConfig.WORLD_WIDTH - SIZE;
 
     private final Rectangle bounds;
     private final DropEffect effect;
@@ -19,8 +30,25 @@ public abstract class FallingItem {
         this.effect = Objects.requireNonNull(effect, "effect");
     }
 
-    public void fall(float delta) {
+    /**
+     * Advances the item one step: every item falls at the same speed, and its subclass
+     * decides any horizontal movement. The item never leaves the world horizontally.
+     */
+    public final void fall(float delta) {
         bounds.y -= FALL_SPEED * delta;
+        float drift = horizontalDrift(delta);
+        if (drift != 0.0f) {
+            bounds.x = MathUtils.clamp(bounds.x + drift, 0.0f, MAX_X);
+        }
+    }
+
+    /**
+     * Returns the horizontal displacement for one fall step of {@code delta} seconds. It is
+     * called exactly once per step, so implementations may advance their own motion state.
+     * Items fall straight down by default.
+     */
+    protected float horizontalDrift(float delta) {
+        return 0.0f;
     }
 
     public boolean isBelowWorld() {
