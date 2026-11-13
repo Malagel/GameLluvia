@@ -8,21 +8,29 @@ import puppy.code.screen.GameOverScreen;
 import puppy.code.screen.GameScreen;
 import puppy.code.screen.LeaderboardScreen;
 import puppy.code.screen.MainMenuScreen;
+import puppy.code.screen.OptionsScreen;
 import puppy.code.screen.PauseScreen;
 import puppy.code.score.HighScoreManager;
 import puppy.code.score.PreferencesScoreStore;
+import puppy.code.settings.AudioSettings;
+import puppy.code.settings.PreferencesSettingsStore;
 
 public class GameLluviaMenu extends Game {
     private static final String SCORE_PREFERENCES = "game-lluvia-high-scores";
+    private static final String SETTINGS_PREFERENCES = "game-lluvia-settings";
 
+    private AudioSettings audioSettings;
     private GameAssets assets;
-    private HighScoreManager highScoreManager;
     private long nextGameId;
 
     @Override
     public void create() {
-        assets = new GameAssets();
-        highScoreManager = HighScoreManager.initialize(
+        audioSettings = new AudioSettings(
+                new PreferencesSettingsStore(com.badlogic.gdx.Gdx.app.getPreferences(SETTINGS_PREFERENCES)));
+        assets = new GameAssets(audioSettings);
+        // The singleton is created once here, the only place that knows how scores are stored.
+        // From then on every screen reaches it through HighScoreManager.getInstance().
+        HighScoreManager.initialize(
                 new PreferencesScoreStore(com.badlogic.gdx.Gdx.app.getPreferences(SCORE_PREFERENCES)));
         setScreen(new MainMenuScreen(this));
     }
@@ -31,8 +39,8 @@ public class GameLluviaMenu extends Game {
         return assets;
     }
 
-    public HighScoreManager getHighScoreManager() {
-        return highScoreManager;
+    public AudioSettings getAudioSettings() {
+        return audioSettings;
     }
 
     public void startGame() {
@@ -40,7 +48,7 @@ public class GameLluviaMenu extends Game {
     }
 
     public void showGameOver(long completedGameId, int score) {
-        highScoreManager.recordScore(completedGameId, score);
+        HighScoreManager.getInstance().recordScore(completedGameId, score);
         replaceScreen(new GameOverScreen(this, score));
     }
 
@@ -50,6 +58,10 @@ public class GameLluviaMenu extends Game {
 
     public void showLeaderboard() {
         replaceScreen(new LeaderboardScreen(this));
+    }
+
+    public void showOptions() {
+        replaceScreen(new OptionsScreen(this));
     }
 
     public void pauseGame(GameScreen gameScreen) {
