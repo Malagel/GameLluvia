@@ -72,16 +72,8 @@ public final class DropSpawner implements DropSource {
     private FallingItem createDrop() {
         int maximumX = (int) (GameConfig.WORLD_WIDTH - FallingItem.SIZE);
         float x = random.nextInt(maximumX + 1);
-        int selectedWeight = random.nextInt(profile.getTotalWeight());
+        int roll = random.nextInt(profile.getTotalWeight());
         lastSpawnTime = nanoTime.getAsLong();
-        for (DropSpawnProfile.DropRegistration drop : profile.getDrops()) {
-            if (selectedWeight < drop.getWeight()) {
-                return Objects.requireNonNull(
-                        drop.create(x, GameConfig.WORLD_HEIGHT),
-                        "drop factory result");
-            }
-            selectedWeight -= drop.getWeight();
-        }
-        throw new IllegalStateException("Profile weights did not select a drop");
+        return profile.createDrop(roll, x, GameConfig.WORLD_HEIGHT);
     }
 }

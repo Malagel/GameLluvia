@@ -15,10 +15,10 @@ import java.util.Objects;
 import puppy.code.GameAssets;
 import puppy.code.GameConfig;
 import puppy.code.GameLluviaMenu;
+import puppy.code.gameplay.FallingItemConsumer;
 import puppy.code.gameplay.GameSession;
 import puppy.code.input.PlayerInput;
 import puppy.code.model.FallingItem;
-import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
@@ -34,13 +34,15 @@ public final class GameScreen extends ScreenAdapter {
     private final OrthographicCamera camera;
     private final Viewport viewport;
     private final GlyphLayout layout;
+    // Created once so drawing the items allocates nothing per frame.
+    private final FallingItemConsumer itemDrawer = this::drawFallingItem;
 
     public GameScreen(GameLluviaMenu game, long gameId, PlayerInput playerInput) {
         this.game = game;
         this.gameId = gameId;
         this.playerInput = Objects.requireNonNull(playerInput, "playerInput");
         assets = game.getAssets();
-        session = new GameSession();
+        session = new GameSession(assets::playEventSound);
         batch = assets.getBatch();
         font = assets.getFont();
         camera = new OrthographicCamera();
@@ -50,11 +52,7 @@ public final class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        GameSession.UpdateResult result = session.update(
-                delta,
-                playerInput.isMovingLeft(),
-                playerInput.isMovingRight());
-        playEventSounds(result);
+        session.update(delta, playerInput.isMovingLeft(), playerInput.isMovingRight());
 
         if (session.isStormActive()) {
             ScreenUtils.clear(0.04f, 0.04f, 0.09f, 1.0f);
@@ -65,12 +63,12 @@ public final class GameScreen extends ScreenAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         drawPlayer();
-        drawFallingItems();
+        session.forEachFallingItem(itemDrawer);
         // Drawn last so falling drops never hide the score, lives, or storm indicator.
         drawHud();
         batch.end();
 
-        if (result.isGameOver()) {
+        if (session.isGameOver()) {
             game.showGameOver(gameId, session.getScore());
         }
     }
@@ -89,12 +87,6 @@ public final class GameScreen extends ScreenAdapter {
         }
     }
 
-    private void playEventSounds(GameSession.UpdateResult result) {
-        for (GameplayEvent event : result.getEvents()) {
-            assets.playEventSound(event);
-        }
-    }
-
     private void drawPlayer() {
         float y = session.getPlayerY();
         if (session.isPlayerHurt()) {
@@ -103,11 +95,8 @@ public final class GameScreen extends ScreenAdapter {
         batch.draw(assets.getPlayerTexture(), session.getPlayerX(), y, Player.SIZE, Player.SIZE);
     }
 
-    private void drawFallingItems() {
-        for (GameSession.FallingItemView item : session.getFallingItems()) {
-            batch.draw(assets.getDropTexture(item.getType()),
-                    item.getX(), item.getY(), FallingItem.SIZE, FallingItem.SIZE);
-        }
+    private void drawFallingItem(FallingItem.Type type, float x, float y) {
+        batch.draw(assets.getDropTexture(type), x, y, FallingItem.SIZE, FallingItem.SIZE);
     }
 
     @Override

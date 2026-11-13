@@ -3,6 +3,7 @@ package puppy.code.gameplay;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import puppy.code.model.FallingItem;
 
 /**
@@ -30,16 +31,28 @@ public final class DropSpawnProfile {
         return spawnIntervalMillis;
     }
 
-    /**
-     * Read-only, immutable registrations. Only {@link DropSpawner} needs them, so they are
-     * not part of the public API: callers configure profiles through the {@link Builder}.
-     */
-    List<DropRegistration> getDrops() {
-        return drops;
-    }
-
     int getTotalWeight() {
         return totalWeight;
+    }
+
+    /**
+     * Creates the drop selected by {@code roll}, a value in {@code [0, getTotalWeight())}.
+     * Each registration owns a range of rolls as wide as its weight, in registration order.
+     * The profile does the selection itself because it is the only owner of its
+     * registrations, which are never exposed.
+     */
+    FallingItem createDrop(int roll, float x, float y) {
+        if (roll < 0 || roll >= totalWeight) {
+            throw new IllegalArgumentException("roll must be in [0, " + totalWeight + ")");
+        }
+        int remaining = roll;
+        for (DropRegistration drop : drops) {
+            if (remaining < drop.weight) {
+                return Objects.requireNonNull(drop.factory.create(x, y), "drop factory result");
+            }
+            remaining -= drop.weight;
+        }
+        throw new IllegalStateException("Profile weights did not select a drop");
     }
 
     long getSpawnIntervalNanos() {
@@ -51,21 +64,13 @@ public final class DropSpawnProfile {
         FallingItem create(float x, float y);
     }
 
-    static final class DropRegistration {
+    private static final class DropRegistration {
         private final int weight;
         private final DropFactory factory;
 
         private DropRegistration(int weight, DropFactory factory) {
             this.weight = weight;
             this.factory = factory;
-        }
-
-        int getWeight() {
-            return weight;
-        }
-
-        FallingItem create(float x, float y) {
-            return factory.create(x, y);
         }
     }
 

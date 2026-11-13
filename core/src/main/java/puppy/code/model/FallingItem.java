@@ -2,9 +2,6 @@ package puppy.code.model;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import puppy.code.GameConfig;
 
@@ -69,14 +66,13 @@ public abstract class FallingItem {
 
     public abstract Type getType();
 
-    public final List<GameplayEvent> applyTo(Player player) {
-        List<GameplayEvent> events = Objects.requireNonNull(
+    /**
+     * Applies this item's strategy to the player and returns the single outcome it caused.
+     */
+    public final GameplayEvent applyTo(Player player) {
+        return Objects.requireNonNull(
                 effect.apply(Objects.requireNonNull(player, "player")),
-                "effect events");
-        for (GameplayEvent event : events) {
-            Objects.requireNonNull(event, "effect event");
-        }
-        return Collections.unmodifiableList(new ArrayList<>(events));
+                "effect event");
     }
 
     public enum Type {

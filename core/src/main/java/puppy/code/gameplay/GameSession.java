@@ -1,18 +1,20 @@
 package puppy.code.gameplay;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 import puppy.code.model.FallingItem;
-import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
 /**
  * Gameplay controller for one game. Besides moving the player, spawning, and resolving
  * collisions, it decides when the calm rain turns into a storm: once the score reaches
  * {@link #STORM_SCORE}, new drops come from the storm source for the rest of the game.
+ *
+ * <p>The session never hands out its collections. Outcomes are pushed to a
+ * {@link GameplayListener} as they happen, and active items are visited through a
+ * {@link FallingItemConsumer} that receives only their type and position.</p>
  */
 public final class GameSession {
     static final int STORM_SCORE = 300;
@@ -20,45 +22,47 @@ public final class GameSession {
     private final Player player;
     private final DropSource calmRain;
     private final DropSource stormRain;
-    private final List<FallingItemView> fallingItems;
-    private final List<FallingItemView> readOnlyFallingItems;
+    private final GameplayListener listener;
+    private final List<FallingItem> fallingItems = new ArrayList<>();
     private boolean stormActive;
 
-    public GameSession() {
+    public GameSession(GameplayListener listener) {
         this(new Player(),
                 new DropSpawner(DropSpawner.standardProfile()),
-                new DropSpawner(DropSpawner.stormProfile()));
+                new DropSpawner(DropSpawner.stormProfile()),
+                listener);
     }
 
-    GameSession(Player player, DropSource calmRain, DropSource stormRain) {
+    GameSession(Player player, DropSource calmRain, DropSource stormRain,
+            GameplayListener listener) {
         this.player = Objects.requireNonNull(player, "player");
         this.calmRain = Objects.requireNonNull(calmRain, "calmRain");
         this.stormRain = Objects.requireNonNull(stormRain, "stormRain");
-        fallingItems = new ArrayList<>();
-        readOnlyFallingItems = Collections.unmodifiableList(fallingItems);
+        this.listener = Objects.requireNonNull(listener, "listener");
         FallingItem initialDrop = calmRain.createInitialDrop();
         if (initialDrop != null) {
-            addFallingItem(initialDrop);
+            fallingItems.add(initialDrop);
         }
     }
 
-    public UpdateResult update(float delta, boolean movingLeft, boolean movingRight) {
-        if (player.isHurt()) {
-            return finishUpdate(UpdateResult.noEvents());
+    public void update(float delta, boolean movingLeft, boolean movingRight) {
+        if (!player.isHurt()) {
+            advanceGameplay(delta, movingLeft, movingRight);
         }
+        player.advanceHurtAnimation();
+    }
 
+    private void advanceGameplay(float delta, boolean movingLeft, boolean movingRight) {
         player.move(movingLeft, movingRight, delta);
         DropSource activeRain = stormActive ? stormRain : calmRain;
         FallingItem newItem = activeRain.createDropIfDue();
         if (newItem != null) {
-            addFallingItem(newItem);
+            fallingItems.add(newItem);
         }
 
-        // Allocated only on a collision: most frames produce no events.
-        List<GameplayEvent> events = null;
-        ListIterator<FallingItemView> iterator = fallingItems.listIterator();
+        ListIterator<FallingItem> iterator = fallingItems.listIterator();
         while (iterator.hasNext()) {
-            FallingItem item = iterator.next().item;
+            FallingItem item = iterator.next();
             item.fall(delta);
             if (item.isBelowWorld()) {
                 iterator.remove();
@@ -68,31 +72,30 @@ public final class GameSession {
                 continue;
             }
 
-            if (events == null) {
-                events = new ArrayList<>();
-            }
-            events.addAll(item.applyTo(player));
+            listener.onGameplayEvent(item.applyTo(player));
             iterator.remove();
             if (player.hasNoLives()) {
-                return finishUpdate(new UpdateResult(events, true));
+                return;
             }
         }
         if (!stormActive && player.getScore() >= STORM_SCORE) {
             stormActive = true;
         }
-        UpdateResult result = events == null || events.isEmpty()
-                ? UpdateResult.noEvents()
-                : new UpdateResult(events, false);
-        return finishUpdate(result);
     }
 
-    private UpdateResult finishUpdate(UpdateResult result) {
-        player.advanceHurtAnimation();
-        return result;
+    /**
+     * Visits every active item in drawing order without exposing the items themselves.
+     */
+    public void forEachFallingItem(FallingItemConsumer consumer) {
+        Objects.requireNonNull(consumer, "consumer");
+        for (int index = 0; index < fallingItems.size(); index++) {
+            FallingItem item = fallingItems.get(index);
+            consumer.accept(item.getType(), item.getX(), item.getY());
+        }
     }
 
-    private void addFallingItem(FallingItem item) {
-        fallingItems.add(new FallingItemView(item));
+    public boolean isGameOver() {
+        return player.hasNoLives();
     }
 
     public int getScore() {
@@ -117,61 +120,5 @@ public final class GameSession {
 
     public boolean isStormActive() {
         return stormActive;
-    }
-
-    public List<FallingItemView> getFallingItems() {
-        return readOnlyFallingItems;
-    }
-
-    /**
-     * Read-only projection of a session-owned falling item. One projection is
-     * allocated when the item spawns and reused while it remains active.
-     */
-    public static final class FallingItemView {
-        private final FallingItem item;
-
-        private FallingItemView(FallingItem item) {
-            this.item = Objects.requireNonNull(item, "item");
-        }
-
-        public float getX() {
-            return item.getX();
-        }
-
-        public float getY() {
-            return item.getY();
-        }
-
-        public FallingItem.Type getType() {
-            return item.getType();
-        }
-    }
-
-    public static final class UpdateResult {
-        private static final UpdateResult NO_EVENTS = new UpdateResult(Collections.emptyList(), false);
-
-        private final List<GameplayEvent> events;
-        private final boolean gameOver;
-
-        /**
-         * Takes ownership of {@code events}: the session builds a new list for each result
-         * and never keeps a reference, so a read-only view is enough and no copy is made.
-         */
-        private UpdateResult(List<GameplayEvent> events, boolean gameOver) {
-            this.events = Collections.unmodifiableList(events);
-            this.gameOver = gameOver;
-        }
-
-        private static UpdateResult noEvents() {
-            return NO_EVENTS;
-        }
-
-        public List<GameplayEvent> getEvents() {
-            return events;
-        }
-
-        public boolean isGameOver() {
-            return gameOver;
-        }
     }
 }

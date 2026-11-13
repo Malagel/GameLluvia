@@ -1,6 +1,7 @@
 package puppy.code.gameplay;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
@@ -17,18 +18,41 @@ class DropSpawnProfileTest {
                 .build();
 
         assertEquals(250L, profile.getSpawnIntervalMillis());
-        assertEquals(2, profile.getDrops().size());
-        assertEquals(7, profile.getDrops().get(0).getWeight());
-        assertEquals(3, profile.getDrops().get(1).getWeight());
         assertEquals(10, profile.getTotalWeight());
     }
 
     @Test
-    void completedProfileDoesNotExposeMutableRegistrations() {
+    void profileSelectsDropsByWeightRangesInRegistrationOrder() {
+        DropSpawnProfile profile = DropSpawnProfile.builder()
+                .spawnIntervalMillis(100L)
+                .addDrop(7, GoodDrop::new)
+                .addDrop(3, BadDrop::new)
+                .build();
+
+        assertInstanceOf(GoodDrop.class, profile.createDrop(0, 0.0f, 0.0f));
+        assertInstanceOf(GoodDrop.class, profile.createDrop(6, 0.0f, 0.0f));
+        assertInstanceOf(BadDrop.class, profile.createDrop(7, 0.0f, 0.0f));
+        assertInstanceOf(BadDrop.class, profile.createDrop(9, 0.0f, 0.0f));
+        assertEquals(12.0f, profile.createDrop(0, 12.0f, 34.0f).getX());
+        assertEquals(34.0f, profile.createDrop(0, 12.0f, 34.0f).getY());
+    }
+
+    @Test
+    void profileRejectsRollsOutsideItsTotalWeight() {
         DropSpawnProfile profile = validBuilder().build();
 
-        assertThrows(UnsupportedOperationException.class,
-                () -> profile.getDrops().add(profile.getDrops().get(0)));
+        assertThrows(IllegalArgumentException.class, () -> profile.createDrop(-1, 0.0f, 0.0f));
+        assertThrows(IllegalArgumentException.class, () -> profile.createDrop(1, 0.0f, 0.0f));
+    }
+
+    @Test
+    void profileRejectsAFactoryThatReturnsNull() {
+        DropSpawnProfile profile = DropSpawnProfile.builder()
+                .spawnIntervalMillis(100L)
+                .addDrop(1, (x, y) -> null)
+                .build();
+
+        assertThrows(NullPointerException.class, () -> profile.createDrop(0, 0.0f, 0.0f));
     }
 
     @Test
@@ -40,9 +64,9 @@ class DropSpawnProfileTest {
         DropSpawnProfile second = builder.build();
 
         assertEquals(100L, first.getSpawnIntervalMillis());
-        assertEquals(1, first.getDrops().size());
+        assertEquals(1, first.getTotalWeight());
         assertEquals(300L, second.getSpawnIntervalMillis());
-        assertEquals(2, second.getDrops().size());
+        assertEquals(5, second.getTotalWeight());
     }
 
     @Test

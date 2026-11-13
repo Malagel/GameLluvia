@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,22 +21,12 @@ import puppy.code.model.Player;
 class DropSpawnerTest {
     @Test
     void standardProfilePreservesIntervalAndSixtyFortyWeights() {
-        DropSpawnProfile profile = DropSpawner.standardProfile();
-
-        assertEquals(100L, profile.getSpawnIntervalMillis());
-        assertEquals(2, profile.getDrops().size());
-        assertEquals(6, profile.getDrops().get(0).getWeight());
-        assertEquals(4, profile.getDrops().get(1).getWeight());
+        assertSixtyFortyProfile(DropSpawner.standardProfile(), 100L);
     }
 
     @Test
     void stormProfileIsDenserAndKeepsTheSixtyFortyWeights() {
-        DropSpawnProfile profile = DropSpawner.stormProfile();
-
-        assertEquals(75L, profile.getSpawnIntervalMillis());
-        assertEquals(2, profile.getDrops().size());
-        assertEquals(6, profile.getDrops().get(0).getWeight());
-        assertEquals(4, profile.getDrops().get(1).getWeight());
+        assertSixtyFortyProfile(DropSpawner.stormProfile(), 75L);
     }
 
     @Test
@@ -49,8 +38,7 @@ class DropSpawnerTest {
 
         assertEquals(calmDrop.getClass(), stormDrop.getClass());
         assertEquals(calmDrop.getType(), stormDrop.getType());
-        assertEquals(Collections.singletonList(GameplayEvent.DROP_COLLECTED),
-                stormDrop.applyTo(stormPlayer));
+        assertEquals(GameplayEvent.DROP_COLLECTED, stormDrop.applyTo(stormPlayer));
         calmDrop.applyTo(calmPlayer);
 
         assertEquals(10, calmPlayer.getScore());
@@ -64,8 +52,7 @@ class DropSpawnerTest {
         FallingItem stormDrop = createDropWithSelection(DropSpawner.stormProfile(), 9);
 
         assertInstanceOf(BadDrop.class, stormDrop);
-        assertEquals(Collections.singletonList(GameplayEvent.PLAYER_DAMAGED),
-                stormDrop.applyTo(player));
+        assertEquals(GameplayEvent.PLAYER_DAMAGED, stormDrop.applyTo(player));
         assertEquals(2, player.getLives());
         assertEquals(0, player.getScore());
     }
@@ -138,6 +125,14 @@ class DropSpawnerTest {
                 () -> 0L);
 
         assertEquals((float) maximumX, spawner.createInitialDrop().getX());
+    }
+
+    /** Six beneficial rolls (0-5) followed by four harmful ones (6-9). */
+    private static void assertSixtyFortyProfile(DropSpawnProfile profile, long intervalMillis) {
+        assertEquals(intervalMillis, profile.getSpawnIntervalMillis());
+        assertEquals(10, profile.getTotalWeight());
+        assertInstanceOf(GoodDrop.class, profile.createDrop(5, 0.0f, 0.0f));
+        assertInstanceOf(BadDrop.class, profile.createDrop(6, 0.0f, 0.0f));
     }
 
     private FallingItem createStandardDropWithSelection(int selection) {
