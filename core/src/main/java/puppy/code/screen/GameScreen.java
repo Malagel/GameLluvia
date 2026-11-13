@@ -1,11 +1,13 @@
 package puppy.code.screen;
 
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -20,6 +22,8 @@ import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
+    private static final String STORM_LABEL = "¡Tormenta! Gotas x2";
+
     private final GameLluviaMenu game;
     private final long gameId;
     private final GameAssets assets;
@@ -52,7 +56,11 @@ public final class GameScreen extends ScreenAdapter {
                 playerInput.isMovingRight());
         playEventSounds(result);
 
-        ScreenUtils.clear(0.0f, 0.0f, 0.2f, 1.0f);
+        if (session.isStormActive()) {
+            ScreenUtils.clear(0.04f, 0.04f, 0.09f, 1.0f);
+        } else {
+            ScreenUtils.clear(0.0f, 0.0f, 0.2f, 1.0f);
+        }
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
@@ -73,6 +81,11 @@ public final class GameScreen extends ScreenAdapter {
         String lives = "Vidas : " + session.getLives();
         layout.setText(font, lives);
         font.draw(batch, layout, GameConfig.WORLD_WIDTH - layout.width - 6.0f, top);
+
+        if (session.isStormActive()) {
+            layout.setText(font, STORM_LABEL, Color.GOLD, 0.0f, Align.left, false);
+            font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2.0f, top);
+        }
     }
 
     private void playEventSounds(GameSession.UpdateResult result) {

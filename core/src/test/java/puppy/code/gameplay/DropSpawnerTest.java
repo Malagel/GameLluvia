@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -14,7 +15,9 @@ import org.junit.jupiter.api.Test;
 import puppy.code.GameConfig;
 import puppy.code.model.BadDrop;
 import puppy.code.model.FallingItem;
+import puppy.code.model.GameplayEvent;
 import puppy.code.model.GoodDrop;
+import puppy.code.model.Player;
 
 class DropSpawnerTest {
     @Test
@@ -25,6 +28,46 @@ class DropSpawnerTest {
         assertEquals(2, profile.getDrops().size());
         assertEquals(6, profile.getDrops().get(0).getWeight());
         assertEquals(4, profile.getDrops().get(1).getWeight());
+    }
+
+    @Test
+    void stormProfileIsDenserAndKeepsTheSixtyFortyWeights() {
+        DropSpawnProfile profile = DropSpawner.stormProfile();
+
+        assertEquals(75L, profile.getSpawnIntervalMillis());
+        assertEquals(2, profile.getDrops().size());
+        assertEquals(6, profile.getDrops().get(0).getWeight());
+        assertEquals(4, profile.getDrops().get(1).getWeight());
+    }
+
+    @Test
+    void stormSelectsADifferentStrategyForTheSameBeneficialDropKind() {
+        FallingItem calmDrop = createDropWithSelection(DropSpawner.standardProfile(), 0);
+        FallingItem stormDrop = createDropWithSelection(DropSpawner.stormProfile(), 0);
+        Player calmPlayer = new Player();
+        Player stormPlayer = new Player();
+
+        assertEquals(calmDrop.getClass(), stormDrop.getClass());
+        assertEquals(calmDrop.getType(), stormDrop.getType());
+        assertEquals(Collections.singletonList(GameplayEvent.DROP_COLLECTED),
+                stormDrop.applyTo(stormPlayer));
+        calmDrop.applyTo(calmPlayer);
+
+        assertEquals(10, calmPlayer.getScore());
+        assertEquals(DropSpawner.STORM_DROP_POINTS, stormPlayer.getScore());
+    }
+
+    @Test
+    void stormKeepsHarmfulDropsHarmful() {
+        Player player = new Player();
+
+        FallingItem stormDrop = createDropWithSelection(DropSpawner.stormProfile(), 9);
+
+        assertInstanceOf(BadDrop.class, stormDrop);
+        assertEquals(Collections.singletonList(GameplayEvent.PLAYER_DAMAGED),
+                stormDrop.applyTo(player));
+        assertEquals(2, player.getLives());
+        assertEquals(0, player.getScore());
     }
 
     @Test
@@ -98,10 +141,11 @@ class DropSpawnerTest {
     }
 
     private FallingItem createStandardDropWithSelection(int selection) {
-        DropSpawner spawner = new DropSpawner(
-                DropSpawner.standardProfile(),
-                new SequenceRandom(0, selection),
-                () -> 0L);
+        return createDropWithSelection(DropSpawner.standardProfile(), selection);
+    }
+
+    private FallingItem createDropWithSelection(DropSpawnProfile profile, int selection) {
+        DropSpawner spawner = new DropSpawner(profile, new SequenceRandom(0, selection), () -> 0L);
         return spawner.createInitialDrop();
     }
 

@@ -9,22 +9,34 @@ import puppy.code.model.FallingItem;
 import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
+/**
+ * Gameplay controller for one game. Besides moving the player, spawning, and resolving
+ * collisions, it decides when the calm rain turns into a storm: once the score reaches
+ * {@link #STORM_SCORE}, new drops come from the storm source for the rest of the game.
+ */
 public final class GameSession {
+    static final int STORM_SCORE = 300;
+
     private final Player player;
-    private final DropSource dropSource;
+    private final DropSource calmRain;
+    private final DropSource stormRain;
     private final List<FallingItemView> fallingItems;
     private final List<FallingItemView> readOnlyFallingItems;
+    private boolean stormActive;
 
     public GameSession() {
-        this(new Player(), new DropSpawner());
+        this(new Player(),
+                new DropSpawner(DropSpawner.standardProfile()),
+                new DropSpawner(DropSpawner.stormProfile()));
     }
 
-    GameSession(Player player, DropSource dropSource) {
+    GameSession(Player player, DropSource calmRain, DropSource stormRain) {
         this.player = Objects.requireNonNull(player, "player");
-        this.dropSource = Objects.requireNonNull(dropSource, "dropSource");
+        this.calmRain = Objects.requireNonNull(calmRain, "calmRain");
+        this.stormRain = Objects.requireNonNull(stormRain, "stormRain");
         fallingItems = new ArrayList<>();
         readOnlyFallingItems = Collections.unmodifiableList(fallingItems);
-        FallingItem initialDrop = dropSource.createInitialDrop();
+        FallingItem initialDrop = calmRain.createInitialDrop();
         if (initialDrop != null) {
             addFallingItem(initialDrop);
         }
@@ -36,7 +48,8 @@ public final class GameSession {
         }
 
         player.move(movingLeft, movingRight, delta);
-        FallingItem newItem = dropSource.createDropIfDue();
+        DropSource activeRain = stormActive ? stormRain : calmRain;
+        FallingItem newItem = activeRain.createDropIfDue();
         if (newItem != null) {
             addFallingItem(newItem);
         }
@@ -63,6 +76,9 @@ public final class GameSession {
             if (player.hasNoLives()) {
                 return finishUpdate(new UpdateResult(events, true));
             }
+        }
+        if (!stormActive && player.getScore() >= STORM_SCORE) {
+            stormActive = true;
         }
         UpdateResult result = events == null || events.isEmpty()
                 ? UpdateResult.noEvents()
@@ -97,6 +113,10 @@ public final class GameSession {
 
     public boolean isPlayerHurt() {
         return player.isHurt();
+    }
+
+    public boolean isStormActive() {
+        return stormActive;
     }
 
     public List<FallingItemView> getFallingItems() {
