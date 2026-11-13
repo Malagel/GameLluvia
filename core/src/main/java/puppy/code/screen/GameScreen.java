@@ -64,9 +64,10 @@ public final class GameScreen extends ScreenAdapter {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        drawHud();
         drawPlayer();
         drawFallingItems();
+        // Drawn last so falling drops never hide the score, lives, or storm indicator.
+        drawHud();
         batch.end();
 
         if (result.isGameOver()) {
