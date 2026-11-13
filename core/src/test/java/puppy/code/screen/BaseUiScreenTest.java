@@ -2,9 +2,9 @@ package puppy.code.screen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -15,9 +15,14 @@ import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import java.lang.reflect.Method;
@@ -25,6 +30,7 @@ import java.lang.reflect.Modifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import puppy.code.GameAssets;
 import puppy.code.GameLluviaMenu;
 
@@ -46,6 +52,9 @@ class BaseUiScreenTest {
 
         assets = mock(GameAssets.class);
         when(assets.getUiTexture()).thenReturn(mock(Texture.class));
+        // The template creates a real title label, which measures its text with the font.
+        BitmapFont font = headlessFont();
+        when(assets.getFont()).thenReturn(font);
         GameLluviaMenu game = mock(GameLluviaMenu.class);
         when(game.getAssets()).thenReturn(assets);
 
@@ -73,14 +82,18 @@ class BaseUiScreenTest {
     }
 
     @Test
-    void templateSuppliesOneRootTableAndSharedWidgetKit() {
+    void templateBuildsTheTitleThenTheScreenContentUnderIt() {
         screen.show();
         screen.render(0.016f);
 
-        assertNotNull(screen.receivedRoot);
+        ArgumentCaptor<Actor> added = ArgumentCaptor.forClass(Actor.class);
+        verify(stage, times(1)).addActor(added.capture());
+        Table root = (Table) added.getValue();
+        assertEquals(2, root.getCells().size);
+        Label title = (Label) root.getCells().get(0).getActor();
+        assertEquals("Pantalla de prueba", title.getText().toString());
+        assertSame(screen.receivedContent, root.getCells().get(1).getActor());
         assertNotNull(screen.receivedUi);
-        verify(stage, times(1)).addActor(any());
-        verify(stage).addActor(screen.receivedRoot);
     }
 
     @Test
@@ -147,6 +160,18 @@ class BaseUiScreenTest {
         assertEquals(BaseUiScreen.class, OptionsScreen.class.getSuperclass());
     }
 
+    /**
+     * LibGDX's bundled default font data with a mocked page texture: enough to measure text
+     * without a graphics context.
+     */
+    private static BitmapFont headlessFont() {
+        FileHandle fontFile =
+                new FileHandle("com/badlogic/gdx/utils/lsans-15.fnt", Files.FileType.Classpath) {
+                };
+        return new BitmapFont(new BitmapFont.BitmapFontData(fontFile, false),
+                new TextureRegion(mock(Texture.class)), false);
+    }
+
     private static void assertFinal(String name, Class<?>... parameterTypes)
             throws NoSuchMethodException {
         Method method = BaseUiScreen.class.getMethod(name, parameterTypes);
@@ -155,7 +180,7 @@ class BaseUiScreenTest {
 
     private static final class TestUiScreen extends BaseUiScreen {
         private int buildCount;
-        private Table receivedRoot;
+        private Table receivedContent;
         private ScreenUi receivedUi;
 
         private TestUiScreen(GameLluviaMenu game, Stage stage) {
@@ -163,9 +188,14 @@ class BaseUiScreenTest {
         }
 
         @Override
-        protected void buildUi(Table root, ScreenUi ui) {
+        protected String getTitle() {
+            return "Pantalla de prueba";
+        }
+
+        @Override
+        protected void buildContent(Table content, ScreenUi ui) {
             buildCount++;
-            receivedRoot = root;
+            receivedContent = content;
             receivedUi = ui;
         }
     }

@@ -15,12 +15,15 @@ import puppy.code.GameLluviaMenu;
 /**
  * Defines the common Scene2D lifecycle for menu-style screens.
  *
- * <p>Subclasses provide only their actors in {@link #buildUi(Table, ScreenUi)}. The hook is
- * invoked lazily, after the concrete constructor has completed, while this class retains control
- * of the screen lifecycle, the root layout container, and the shared widget styles.</p>
+ * <p>Building the interface is itself a fixed sequence of steps: create the shared widget
+ * kit and a centred root table, add the screen's title, then add the screen's own content
+ * below it. Subclasses supply only the two variable steps, {@link #getTitle()} and
+ * {@link #buildContent(Table, ScreenUi)}. They are invoked lazily, after the concrete
+ * constructor has completed, while this class retains control of the screen lifecycle.</p>
  */
 public abstract class BaseUiScreen extends ScreenAdapter {
     private static final float MAX_FRAME_DELTA = 1.0f / 30.0f;
+    private static final float TITLE_GAP = 16.0f;
 
     private final GameLluviaMenu game;
     private final Stage stage;
@@ -48,10 +51,15 @@ public abstract class BaseUiScreen extends ScreenAdapter {
     }
 
     /**
-     * Fills the screen's centred root table. The root is created, sized to the stage, and
-     * added to it by this class; {@code ui} creates the shared styled widgets.
+     * Text shown as this screen's title, above its content.
      */
-    protected abstract void buildUi(Table root, ScreenUi ui);
+    protected abstract String getTitle();
+
+    /**
+     * Fills the table placed under the title with this screen's labels and buttons;
+     * {@code ui} creates the shared styled widgets.
+     */
+    protected abstract void buildContent(Table content, ScreenUi ui);
 
     protected final GameLluviaMenu getGame() {
         return game;
@@ -95,12 +103,20 @@ public abstract class BaseUiScreen extends ScreenAdapter {
     private void initializeUi() {
         requireActive();
         if (!uiInitialized) {
-            Table root = new Table();
-            root.setFillParent(true);
-            buildUi(root, new ScreenUi(game.getAssets()));
-            stage.addActor(root);
+            stage.addActor(buildRoot(new ScreenUi(game.getAssets())));
             uiInitialized = true;
         }
+    }
+
+    private Table buildRoot(ScreenUi ui) {
+        Table root = new Table();
+        root.setFillParent(true);
+        root.add(ui.title(getTitle())).padBottom(TITLE_GAP);
+        root.row();
+        Table content = new Table();
+        root.add(content);
+        buildContent(content, ui);
+        return root;
     }
 
     private void unregisterInputProcessor() {

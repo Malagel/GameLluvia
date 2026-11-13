@@ -10,26 +10,28 @@ public final class LeaderboardScreen extends BaseUiScreen {
     }
 
     @Override
-    protected void buildUi(Table root, ScreenUi ui) {
-        root.add(ui.title("Puntuaciones")).padBottom(18.0f);
-        root.row();
+    protected String getTitle() {
+        return "Puntuaciones";
+    }
 
+    @Override
+    protected void buildContent(Table content, ScreenUi ui) {
         HighScoreManager ranking = HighScoreManager.getInstance();
         int count = ranking.getScoreCount();
         if (count == 0) {
-            root.add(ui.label("Aún no hay puntuaciones.")).padBottom(20.0f);
-            root.row();
+            content.add(ui.label("Aún no hay puntuaciones.")).padBottom(20.0f);
+            content.row();
         } else {
             for (int position = 0; position < count; position++) {
-                root.add(ui.label((position + 1) + ".  " + ranking.getScore(position)))
+                content.add(ui.label((position + 1) + ".  " + ranking.getScore(position)))
                         .pad(3.0f);
-                root.row();
+                content.row();
             }
-            root.add().height(14.0f);
-            root.row();
+            content.add().height(14.0f);
+            content.row();
         }
 
-        root.add(ui.button("Volver", getGame()::showMainMenu))
+        content.add(ui.button("Volver", getGame()::showMainMenu))
                 .width(ScreenUi.BACK_BUTTON_WIDTH)
                 .height(ScreenUi.BUTTON_HEIGHT)
                 .padTop(5.0f);

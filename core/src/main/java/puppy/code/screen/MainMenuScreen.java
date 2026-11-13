@@ -14,21 +14,21 @@ public final class MainMenuScreen extends BaseUiScreen {
     }
 
     @Override
-    protected void buildUi(Table root, ScreenUi ui) {
-        Label title = ui.title("Game Lluvia");
-        title.setFontScale(1.6f);
-        root.add(title).padBottom(8.0f);
-        root.row();
+    protected String getTitle() {
+        return "Game Lluvia";
+    }
 
+    @Override
+    protected void buildContent(Table content, ScreenUi ui) {
         Label objective = ui.label(OBJECTIVE);
         objective.setFontScale(0.75f);
-        root.add(objective).padBottom(14.0f);
-        root.row();
+        content.add(objective).padBottom(14.0f);
+        content.row();
 
         GameLluviaMenu game = getGame();
-        ui.addMenuButton(root, "Jugar", game::startGame);
-        ui.addMenuButton(root, "Puntuaciones", game::showLeaderboard);
-        ui.addMenuButton(root, "Opciones", game::showOptions);
-        ui.addMenuButton(root, "Salir", () -> Gdx.app.exit());
+        ui.addMenuButton(content, "Jugar", game::startGame);
+        ui.addMenuButton(content, "Puntuaciones", game::showLeaderboard);
+        ui.addMenuButton(content, "Opciones", game::showOptions);
+        ui.addMenuButton(content, "Salir", () -> Gdx.app.exit());
     }
 }

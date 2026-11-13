@@ -12,14 +12,17 @@ public final class GameOverScreen extends BaseUiScreen {
     }
 
     @Override
-    protected void buildUi(Table root, ScreenUi ui) {
-        root.add(ui.title("GAME OVER")).padBottom(12.0f);
-        root.row();
-        root.add(ui.label("Puntuación: " + score)).padBottom(20.0f);
-        root.row();
+    protected String getTitle() {
+        return "GAME OVER";
+    }
+
+    @Override
+    protected void buildContent(Table content, ScreenUi ui) {
+        content.add(ui.label("Puntuación: " + score)).padBottom(20.0f);
+        content.row();
 
         GameLluviaMenu game = getGame();
-        ui.addMenuButton(root, "Reintentar", game::startGame);
-        ui.addMenuButton(root, "Menú principal", game::showMainMenu);
+        ui.addMenuButton(content, "Reintentar", game::startGame);
+        ui.addMenuButton(content, "Menú principal", game::showMainMenu);
     }
 }
