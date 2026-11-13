@@ -94,4 +94,50 @@ class DropEffectTest {
 
         assertThrows(NullPointerException.class, () -> item.applyTo(null));
     }
+
+    @Test
+    void contextAppliesTheStrategyThatReplacedTheOriginalOne() {
+        Player player = new Player();
+        FallingItem item = new GoodDrop(0.0f, 0.0f);
+
+        item.setEffect(new DamageEffect());
+
+        assertEquals(GameplayEvent.PLAYER_DAMAGED, item.applyTo(player));
+        assertEquals(2, player.getLives());
+        assertEquals(0, player.getScore());
+        assertThrows(NullPointerException.class, () -> item.setEffect(null));
+    }
+
+    @Test
+    void intensifyingABeneficialDropDoublesItsReward() {
+        Player player = new Player();
+        FallingItem item = new GoodDrop(0.0f, 0.0f);
+
+        item.intensify();
+        item.applyTo(player);
+
+        assertEquals(20, player.getScore());
+    }
+
+    @Test
+    void intensifyingAHarmfulDropKeepsItsDamage() {
+        Player player = new Player();
+        FallingItem item = new BadDrop(0.0f, 0.0f);
+
+        item.intensify();
+
+        assertEquals(GameplayEvent.PLAYER_DAMAGED, item.applyTo(player));
+        assertEquals(2, player.getLives());
+    }
+
+    @Test
+    void strategiesDecideTheirOwnIntensifiedVersion() {
+        DropEffect damage = new DamageEffect();
+        Player player = new Player();
+        player.addScore(Integer.MAX_VALUE - 5);
+
+        assertSame(damage, damage.intensified());
+        new ScoreEffect(Integer.MAX_VALUE).intensified().apply(player);
+        assertEquals(Integer.MAX_VALUE, player.getScore());
+    }
 }

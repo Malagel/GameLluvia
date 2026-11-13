@@ -12,7 +12,8 @@ import puppy.code.model.Player;
 /**
  * Gameplay controller for one game. Besides moving the player, spawning, and resolving
  * collisions, it keeps the current {@link Weather}: new drops come from the rain source of
- * that phase, so reaching the storm score switches the game to the storm source.
+ * that phase, so reaching the storm score switches the game to the storm source, and the
+ * drops already falling change strategy at runtime to their intensified effect.
  *
  * <p>The session never hands out its collections. Outcomes are pushed to a
  * {@link GameplayListener} as they happen, and active items are visited through a
@@ -82,7 +83,22 @@ public final class GameSession {
                 return;
             }
         }
-        weather = Weather.forScore(player.getScore());
+        updateWeather();
+    }
+
+    /**
+     * When the rain intensifies, the drops already falling switch to their stronger
+     * strategy at once, so every drop on screen matches the new phase.
+     */
+    private void updateWeather() {
+        Weather reached = Weather.forScore(player.getScore());
+        if (reached == weather) {
+            return;
+        }
+        weather = reached;
+        for (int index = 0; index < fallingItems.size(); index++) {
+            fallingItems.get(index).intensify();
+        }
     }
 
     /**

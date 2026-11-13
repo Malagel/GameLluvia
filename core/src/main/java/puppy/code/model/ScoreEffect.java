@@ -18,4 +18,12 @@ public final class ScoreEffect implements DropEffect {
         player.addScore(points);
         return GameplayEvent.DROP_COLLECTED;
     }
+
+    /**
+     * Awards double points, saturating at {@link Integer#MAX_VALUE}.
+     */
+    @Override
+    public DropEffect intensified() {
+        return new ScoreEffect((int) Math.min(Integer.MAX_VALUE, 2L * points));
+    }
 }

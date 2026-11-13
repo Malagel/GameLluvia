@@ -153,6 +153,27 @@ class GameSessionTest {
     }
 
     @Test
+    void dropsAlreadyFallingChangeStrategyWhenTheStormStarts() {
+        Player player = new Player();
+        player.addScore(STORM_SCORE - 10);
+        GoodDrop triggersStorm = new GoodDrop(player.getX(), player.getY());
+        GoodDrop stillFalling = new GoodDrop(player.getX(), player.getY() + 60.0f);
+        GameSession session = new GameSession(player,
+                rain(new SequenceDropSource(triggersStorm, stillFalling), new SequenceDropSource()),
+                events::add);
+
+        session.update(0.0f, false, false);
+        assertEquals(STORM_SCORE, session.getScore());
+        assertEquals(Weather.STORM, session.getWeather());
+
+        session.update(0.1f, false, false);
+
+        assertEquals(STORM_SCORE + 20, session.getScore());
+        assertEquals(Arrays.asList(GameplayEvent.DROP_COLLECTED, GameplayEvent.DROP_COLLECTED),
+                events);
+    }
+
+    @Test
     void theRainStaysCalmBelowTheStormScore() {
         Player player = new Player();
         player.addScore(STORM_SCORE - 20);
