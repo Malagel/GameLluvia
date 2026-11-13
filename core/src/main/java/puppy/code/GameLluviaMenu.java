@@ -1,7 +1,9 @@
 package puppy.code;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import puppy.code.input.KeyboardPlayerInput;
 import puppy.code.screen.GameOverScreen;
 import puppy.code.screen.GameScreen;
 import puppy.code.screen.LeaderboardScreen;
@@ -34,7 +36,7 @@ public class GameLluviaMenu extends Game {
     }
 
     public void startGame() {
-        replaceScreen(new GameScreen(this, ++nextGameId));
+        replaceScreen(new GameScreen(this, ++nextGameId, KeyboardPlayerInput.standard(Gdx.input)));
     }
 
     public void showGameOver(long completedGameId, int score) {
