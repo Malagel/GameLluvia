@@ -80,6 +80,20 @@ class GameSessionTest {
     }
 
     @Test
+    void framesWithoutCollisionsReportNoEventsThroughAReadOnlyResult() {
+        Player player = new Player();
+        GameSession session = sessionWith(player, new BadDrop(0.0f, 300.0f));
+
+        GameSession.UpdateResult result = session.update(0.016f, false, false);
+
+        assertTrue(result.getEvents().isEmpty());
+        assertFalse(result.isGameOver());
+        assertThrows(UnsupportedOperationException.class,
+                () -> result.getEvents().add(GameplayEvent.PLAYER_DAMAGED));
+        assertEquals(3, session.getLives());
+    }
+
+    @Test
     void fallingItemsAreExposedAsReusableReadOnlyProjections() {
         Player player = new Player();
         GameSession session = sessionWith(player, new GoodDrop(0.0f, 100.0f));

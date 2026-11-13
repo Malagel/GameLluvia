@@ -41,7 +41,8 @@ public final class GameSession {
             addFallingItem(newItem);
         }
 
-        List<GameplayEvent> events = new ArrayList<>();
+        // Allocated only on a collision: most frames produce no events.
+        List<GameplayEvent> events = null;
         ListIterator<FallingItemView> iterator = fallingItems.listIterator();
         while (iterator.hasNext()) {
             FallingItem item = iterator.next().item;
@@ -54,13 +55,16 @@ public final class GameSession {
                 continue;
             }
 
+            if (events == null) {
+                events = new ArrayList<>();
+            }
             events.addAll(item.applyTo(player));
             iterator.remove();
             if (player.hasNoLives()) {
                 return finishUpdate(new UpdateResult(events, true));
             }
         }
-        UpdateResult result = events.isEmpty()
+        UpdateResult result = events == null || events.isEmpty()
                 ? UpdateResult.noEvents()
                 : new UpdateResult(events, false);
         return finishUpdate(result);
@@ -129,8 +133,12 @@ public final class GameSession {
         private final List<GameplayEvent> events;
         private final boolean gameOver;
 
+        /**
+         * Takes ownership of {@code events}: the session builds a new list for each result
+         * and never keeps a reference, so a read-only view is enough and no copy is made.
+         */
         private UpdateResult(List<GameplayEvent> events, boolean gameOver) {
-            this.events = Collections.unmodifiableList(new ArrayList<>(events));
+            this.events = Collections.unmodifiableList(events);
             this.gameOver = gameOver;
         }
 

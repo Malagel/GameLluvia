@@ -2,7 +2,6 @@ package puppy.code.screen;
 
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -47,18 +46,17 @@ public final class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0.0f, 0.0f, 0.2f, 1.0f);
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
-
-        batch.begin();
-        drawHud();
-
         GameSession.UpdateResult result = session.update(
                 delta,
                 playerInput.isMovingLeft(),
                 playerInput.isMovingRight());
         playEventSounds(result);
+
+        ScreenUtils.clear(0.0f, 0.0f, 0.2f, 1.0f);
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        drawHud();
         drawPlayer();
         drawFallingItems();
         batch.end();
@@ -79,16 +77,7 @@ public final class GameScreen extends ScreenAdapter {
 
     private void playEventSounds(GameSession.UpdateResult result) {
         for (GameplayEvent event : result.getEvents()) {
-            switch (event) {
-                case DROP_COLLECTED:
-                    assets.playCollectSound();
-                    break;
-                case PLAYER_DAMAGED:
-                    assets.playHurtSound();
-                    break;
-                default:
-                    throw new IllegalStateException("Unhandled gameplay event: " + event);
-            }
+            assets.playEventSound(event);
         }
     }
 
@@ -102,10 +91,8 @@ public final class GameScreen extends ScreenAdapter {
 
     private void drawFallingItems() {
         for (GameSession.FallingItemView item : session.getFallingItems()) {
-            Texture texture = item.getType() == FallingItem.Type.BAD
-                    ? assets.getBadDropTexture()
-                    : assets.getGoodDropTexture();
-            batch.draw(texture, item.getX(), item.getY(), FallingItem.SIZE, FallingItem.SIZE);
+            batch.draw(assets.getDropTexture(item.getType()),
+                    item.getX(), item.getY(), FallingItem.SIZE, FallingItem.SIZE);
         }
     }
 
