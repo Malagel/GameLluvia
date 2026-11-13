@@ -11,18 +11,31 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 import puppy.code.GameAssets;
 import puppy.code.GameConfig;
 import puppy.code.GameLluviaMenu;
+import puppy.code.gameplay.FallingItemConsumer;
 import puppy.code.gameplay.GameSession;
+import puppy.code.gameplay.Weather;
 import puppy.code.input.PlayerInput;
+import puppy.code.model.DropAppearance;
 import puppy.code.model.FallingItem;
-import puppy.code.model.GameplayEvent;
 import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
-    private static final String STORM_LABEL = "¡Tormenta! Gotas x2";
+    // How each weather phase looks. A new phase adds one entry per table, not a condition.
+    private static final Map<Weather, Color> SKY_COLORS = new EnumMap<>(Weather.class);
+    private static final Map<Weather, String> WEATHER_LABELS = new EnumMap<>(Weather.class);
+
+    static {
+        SKY_COLORS.put(Weather.CALM, new Color(0.0f, 0.0f, 0.2f, 1.0f));
+        SKY_COLORS.put(Weather.STORM, new Color(0.04f, 0.04f, 0.09f, 1.0f));
+        WEATHER_LABELS.put(Weather.CALM, "");
+        WEATHER_LABELS.put(Weather.STORM, "¡Tormenta! Gotas x2");
+    }
 
     private final GameLluviaMenu game;
     private final long gameId;
@@ -34,13 +47,15 @@ public final class GameScreen extends ScreenAdapter {
     private final OrthographicCamera camera;
     private final Viewport viewport;
     private final GlyphLayout layout;
+    // Created once so drawing the items allocates nothing per frame.
+    private final FallingItemConsumer itemDrawer = this::drawFallingItem;
 
     public GameScreen(GameLluviaMenu game, long gameId, PlayerInput playerInput) {
         this.game = game;
         this.gameId = gameId;
         this.playerInput = Objects.requireNonNull(playerInput, "playerInput");
         assets = game.getAssets();
-        session = new GameSession();
+        session = new GameSession(assets::playEventSound);
         batch = assets.getBatch();
         font = assets.getFont();
         camera = new OrthographicCamera();
@@ -50,27 +65,19 @@ public final class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        GameSession.UpdateResult result = session.update(
-                delta,
-                playerInput.isMovingLeft(),
-                playerInput.isMovingRight());
-        playEventSounds(result);
+        session.update(delta, playerInput.isMovingLeft(), playerInput.isMovingRight());
 
-        if (session.isStormActive()) {
-            ScreenUtils.clear(0.04f, 0.04f, 0.09f, 1.0f);
-        } else {
-            ScreenUtils.clear(0.0f, 0.0f, 0.2f, 1.0f);
-        }
+        ScreenUtils.clear(SKY_COLORS.get(session.getWeather()));
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         drawPlayer();
-        drawFallingItems();
+        session.forEachFallingItem(itemDrawer);
         // Drawn last so falling drops never hide the score, lives, or storm indicator.
         drawHud();
         batch.end();
 
-        if (result.isGameOver()) {
+        if (session.isGameOver()) {
             game.showGameOver(gameId, session.getScore());
         }
     }
@@ -83,16 +90,9 @@ public final class GameScreen extends ScreenAdapter {
         layout.setText(font, lives);
         font.draw(batch, layout, GameConfig.WORLD_WIDTH - layout.width - 6.0f, top);
 
-        if (session.isStormActive()) {
-            layout.setText(font, STORM_LABEL, Color.GOLD, 0.0f, Align.left, false);
-            font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2.0f, top);
-        }
-    }
-
-    private void playEventSounds(GameSession.UpdateResult result) {
-        for (GameplayEvent event : result.getEvents()) {
-            assets.playEventSound(event);
-        }
+        String weatherLabel = WEATHER_LABELS.get(session.getWeather());
+        layout.setText(font, weatherLabel, Color.GOLD, 0.0f, Align.left, false);
+        font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2.0f, top);
     }
 
     private void drawPlayer() {
@@ -103,11 +103,8 @@ public final class GameScreen extends ScreenAdapter {
         batch.draw(assets.getPlayerTexture(), session.getPlayerX(), y, Player.SIZE, Player.SIZE);
     }
 
-    private void drawFallingItems() {
-        for (GameSession.FallingItemView item : session.getFallingItems()) {
-            batch.draw(assets.getDropTexture(item.getType()),
-                    item.getX(), item.getY(), FallingItem.SIZE, FallingItem.SIZE);
-        }
+    private void drawFallingItem(DropAppearance appearance, float x, float y) {
+        batch.draw(assets.getDropTexture(appearance), x, y, FallingItem.SIZE, FallingItem.SIZE);
     }
 
     @Override

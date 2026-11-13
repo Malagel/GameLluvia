@@ -1,14 +1,20 @@
 package puppy.code.model;
 
-import java.util.List;
-
 /**
  * Defines an effect that a falling item applies when the player collects it.
  */
 public interface DropEffect {
     /**
-     * Applies this effect and reports the outcomes that presentation layers may react to.
-     * The returned list must not be {@code null} and must not contain {@code null} values.
+     * Applies this effect and reports the outcome that presentation layers may react to.
+     * The returned event must not be {@code null}.
      */
-    List<GameplayEvent> apply(Player player);
+    GameplayEvent apply(Player player);
+
+    /**
+     * The effect that replaces this one when the rain intensifies. Effects that do not
+     * change keep themselves, so only the strategies that grow need to override it.
+     */
+    default DropEffect intensified() {
+        return this;
+    }
 }

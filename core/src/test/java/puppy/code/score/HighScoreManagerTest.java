@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,8 +52,18 @@ class HighScoreManagerTest {
         manager.recordScore(5L, 10);
         manager.recordScore(6L, 60);
 
-        assertEquals(Arrays.asList(80, 80, 60, 50, 30), manager.getScores());
-        assertThrows(UnsupportedOperationException.class, () -> manager.getScores().add(100));
+        assertEquals(Arrays.asList(80, 80, 60, 50, 30), scoresOf(manager));
+    }
+
+    @Test
+    void rankingPositionsOutsideTheRankingAreRejected() {
+        HighScoreManager manager = HighScoreManager.initialize(new InMemoryScoreStore("70,40"));
+
+        assertEquals(2, manager.getScoreCount());
+        assertEquals(70, manager.getScore(0));
+        assertEquals(40, manager.getScore(1));
+        assertThrows(IndexOutOfBoundsException.class, () -> manager.getScore(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> manager.getScore(2));
     }
 
     @Test
@@ -64,7 +76,7 @@ class HighScoreManagerTest {
         HighScoreManager.shutdown();
         HighScoreManager reloaded = HighScoreManager.initialize(store);
 
-        assertEquals(Arrays.asList(75, 25), reloaded.getScores());
+        assertEquals(Arrays.asList(75, 25), scoresOf(reloaded));
     }
 
     @Test
@@ -74,24 +86,24 @@ class HighScoreManagerTest {
         HighScoreManager manager = HighScoreManager.initialize(store);
         manager.recordScore(1L, 10);
 
-        assertEquals(Arrays.asList(90, 80, 70, 60, 50), manager.getScores());
+        assertEquals(Arrays.asList(90, 80, 70, 60, 50), scoresOf(manager));
         assertEquals("90,80,70,60,50", store.data);
     }
 
     @Test
     void handlesMissingEmptyAndMalformedSavedData() {
         InMemoryScoreStore missingStore = new InMemoryScoreStore(null);
-        assertEquals(Collections.emptyList(), HighScoreManager.initialize(missingStore).getScores());
+        assertEquals(Collections.emptyList(), scoresOf(HighScoreManager.initialize(missingStore)));
 
         HighScoreManager.shutdown();
         InMemoryScoreStore emptyStore = new InMemoryScoreStore("   ");
-        assertEquals(Collections.emptyList(), HighScoreManager.initialize(emptyStore).getScores());
+        assertEquals(Collections.emptyList(), scoresOf(HighScoreManager.initialize(emptyStore)));
 
         HighScoreManager.shutdown();
         InMemoryScoreStore malformedStore =
                 new InMemoryScoreStore(" 100,not-a-score,-20,50,,25 ");
         assertEquals(Arrays.asList(100, 50, 25),
-                HighScoreManager.initialize(malformedStore).getScores());
+                scoresOf(HighScoreManager.initialize(malformedStore)));
         assertEquals("100,50,25", malformedStore.data);
     }
 
@@ -103,7 +115,7 @@ class HighScoreManagerTest {
         assertTrue(manager.recordScore(42L, 100));
         assertFalse(manager.recordScore(42L, 100));
 
-        assertEquals(Collections.singletonList(100), manager.getScores());
+        assertEquals(Collections.singletonList(100), scoresOf(manager));
         assertEquals(1, store.saveCount);
     }
 
@@ -114,7 +126,7 @@ class HighScoreManagerTest {
 
         assertTrue(manager.recordScore(1L, 80));
 
-        assertEquals(Arrays.asList(90, 80, 70), manager.getScores());
+        assertEquals(Arrays.asList(90, 80, 70), scoresOf(manager));
         assertTrue(manager.hasPendingSave());
         assertEquals("90,70", store.data);
     }
@@ -131,9 +143,18 @@ class HighScoreManagerTest {
         assertFalse(manager.hasPendingSave());
         assertFalse(manager.recordScore(1L, 100));
 
-        assertEquals(Collections.singletonList(100), manager.getScores());
+        assertEquals(Collections.singletonList(100), scoresOf(manager));
         assertEquals("100", store.data);
         assertEquals(2, store.saveCount);
+    }
+
+    /** Reads the ranking through the public positional accessors, highest first. */
+    private static List<Integer> scoresOf(HighScoreManager manager) {
+        List<Integer> scores = new ArrayList<>();
+        for (int position = 0; position < manager.getScoreCount(); position++) {
+            scores.add(manager.getScore(position));
+        }
+        return scores;
     }
 
     private static final class InMemoryScoreStore implements ScoreStore {

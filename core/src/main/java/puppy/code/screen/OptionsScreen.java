@@ -22,16 +22,18 @@ public final class OptionsScreen extends BaseUiScreen {
     }
 
     @Override
-    protected void buildUi(Table root, ScreenUi ui) {
+    protected String getTitle() {
+        return "Opciones";
+    }
+
+    @Override
+    protected void buildContent(Table content, ScreenUi ui) {
         AudioSettings settings = getGame().getAudioSettings();
         GameAssets assets = getGame().getAssets();
 
-        root.add(ui.title("Opciones")).colspan(4).padBottom(24.0f);
-        root.row();
-
-        addVolumeRow(root, ui, "Música", settings::getMusicPercent,
+        addVolumeRow(content, ui, "Música", settings::getMusicPercent,
                 settings::decreaseMusic, settings::increaseMusic);
-        addVolumeRow(root, ui, "Efectos", settings::getEffectsPercent,
+        addVolumeRow(content, ui, "Efectos", settings::getEffectsPercent,
                 () -> {
                     settings.decreaseEffects();
                     assets.playCollectSound();
@@ -41,7 +43,7 @@ public final class OptionsScreen extends BaseUiScreen {
                     assets.playCollectSound();
                 });
 
-        root.add(ui.button("Volver", getGame()::showMainMenu))
+        content.add(ui.button("Volver", getGame()::showMainMenu))
                 .colspan(4)
                 .width(ScreenUi.BACK_BUTTON_WIDTH)
                 .height(ScreenUi.BUTTON_HEIGHT)

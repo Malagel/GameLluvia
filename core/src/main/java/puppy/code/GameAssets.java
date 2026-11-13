@@ -9,17 +9,20 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import puppy.code.model.FallingItem;
+import puppy.code.model.BadDrop;
+import puppy.code.model.DropAppearance;
 import puppy.code.model.GameplayEvent;
+import puppy.code.model.GoodDrop;
 import puppy.code.settings.AudioSettings;
 
 /**
  * Owns the shared LibGDX resources and is the single presentation mapping from domain
- * identities and outcomes to those resources. Screens ask for the texture of a drop type
- * or the sound of a gameplay event and never decide it themselves, so a new drop type or
- * event only needs a new entry here.
+ * identities and outcomes to those resources. Screens ask for the texture of a drop's
+ * appearance or the sound of a gameplay event and never decide it themselves, so a new
+ * kind of drop or event only needs a new entry here.
  */
 public final class GameAssets implements Disposable {
     private final AudioSettings audioSettings;
@@ -32,7 +35,7 @@ public final class GameAssets implements Disposable {
     private final Sound collectSound;
     private final Sound hurtSound;
     private final Music rainMusic;
-    private final Map<FallingItem.Type, Texture> dropTextures;
+    private final Map<DropAppearance, Texture> dropTextures;
     private final Map<GameplayEvent, Sound> eventSounds;
 
     public GameAssets(AudioSettings audioSettings) {
@@ -53,10 +56,10 @@ public final class GameAssets implements Disposable {
         rainMusic = Gdx.audio.newMusic(Gdx.files.internal("rain.mp3"));
         rainMusic.setLooping(true);
 
-        dropTextures = new EnumMap<>(FallingItem.Type.class);
-        dropTextures.put(FallingItem.Type.GOOD, goodDropTexture);
-        dropTextures.put(FallingItem.Type.BAD, badDropTexture);
-        requireComplete(dropTextures, FallingItem.Type.values());
+        // Registration of each drop kind's texture: a new kind adds one line here.
+        dropTextures = new HashMap<>();
+        dropTextures.put(GoodDrop.APPEARANCE, goodDropTexture);
+        dropTextures.put(BadDrop.APPEARANCE, badDropTexture);
 
         eventSounds = new EnumMap<>(GameplayEvent.class);
         eventSounds.put(GameplayEvent.DROP_COLLECTED, collectSound);
@@ -87,8 +90,12 @@ public final class GameAssets implements Disposable {
         return playerTexture;
     }
 
-    public Texture getDropTexture(FallingItem.Type type) {
-        return dropTextures.get(Objects.requireNonNull(type, "type"));
+    public Texture getDropTexture(DropAppearance appearance) {
+        Texture texture = dropTextures.get(Objects.requireNonNull(appearance, "appearance"));
+        if (texture == null) {
+            throw new IllegalArgumentException("No texture registered for " + appearance);
+        }
+        return texture;
     }
 
     public Texture getUiTexture() {

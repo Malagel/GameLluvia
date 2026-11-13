@@ -2,9 +2,6 @@ package puppy.code.model;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import puppy.code.GameConfig;
 
@@ -12,9 +9,10 @@ import puppy.code.GameConfig;
  * Something that falls from the sky and can be caught by the player.
  *
  * <p>The two axes of variation use different mechanisms on purpose. What happens when the
- * item is caught is composed through a {@link DropEffect} strategy, so it can be chosen per
- * item at creation time. How the item moves is intrinsic to its kind, so subclasses vary it
- * through the {@link #horizontalDrift(float)} hook of the {@link #fall(float)} template.</p>
+ * item is caught is composed through a {@link DropEffect} strategy, chosen when the item is
+ * created and replaceable while it falls. How the item moves is intrinsic to its kind, so
+ * subclasses vary it through the {@link #horizontalDrift(float)} hook of the
+ * {@link #fall(float)} template.</p>
  */
 public abstract class FallingItem {
     public static final float SIZE = 48.0f;
@@ -23,11 +21,27 @@ public abstract class FallingItem {
     private static final float MAX_X = GameConfig.WORLD_WIDTH - SIZE;
 
     private final Rectangle bounds;
-    private final DropEffect effect;
+    private DropEffect effect;
 
     protected FallingItem(float x, float y, DropEffect effect) {
         bounds = new Rectangle(x, y, SIZE, SIZE);
+        setEffect(effect);
+    }
+
+    /**
+     * Replaces this item's strategy. The next time the item is caught, the new effect is
+     * the one applied.
+     */
+    public final void setEffect(DropEffect effect) {
         this.effect = Objects.requireNonNull(effect, "effect");
+    }
+
+    /**
+     * Switches to the stronger version of the current effect when the rain intensifies.
+     * Each strategy decides what its stronger version is, so no type checks are needed.
+     */
+    public final void intensify() {
+        setEffect(effect.intensified());
     }
 
     /**
@@ -67,20 +81,17 @@ public abstract class FallingItem {
         return bounds.y;
     }
 
-    public abstract Type getType();
+    /**
+     * The visual identity of this kind of item, declared by each subclass.
+     */
+    public abstract DropAppearance getAppearance();
 
-    public final List<GameplayEvent> applyTo(Player player) {
-        List<GameplayEvent> events = Objects.requireNonNull(
+    /**
+     * Applies this item's strategy to the player and returns the single outcome it caused.
+     */
+    public final GameplayEvent applyTo(Player player) {
+        return Objects.requireNonNull(
                 effect.apply(Objects.requireNonNull(player, "player")),
-                "effect events");
-        for (GameplayEvent event : events) {
-            Objects.requireNonNull(event, "effect event");
-        }
-        return Collections.unmodifiableList(new ArrayList<>(events));
-    }
-
-    public enum Type {
-        GOOD,
-        BAD
+                "effect event");
     }
 }

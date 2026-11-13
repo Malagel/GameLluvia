@@ -92,8 +92,26 @@ public final class HighScoreManager {
         return saveCurrentRanking();
     }
 
-    public synchronized List<Integer> getScores() {
-        return Collections.unmodifiableList(new ArrayList<>(scores));
+    /**
+     * Number of ranked scores, at most {@link #MAX_SCORES}.
+     */
+    public synchronized int getScoreCount() {
+        return scores.size();
+    }
+
+    /**
+     * Score at a ranking position, where {@code 0} is the highest. The ranking itself is
+     * never handed out, so callers cannot depend on how it is stored.
+     *
+     * @throws IndexOutOfBoundsException if {@code position} is outside
+     *         {@code [0, getScoreCount())}
+     */
+    public synchronized int getScore(int position) {
+        if (position < 0 || position >= scores.size()) {
+            throw new IndexOutOfBoundsException(
+                    "position " + position + " outside [0, " + scores.size() + ")");
+        }
+        return scores.get(position);
     }
 
     private void loadScores() {
