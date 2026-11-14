@@ -5,10 +5,6 @@ import puppy.code.model.DropEffect;
 import puppy.code.model.GoodDrop;
 import puppy.code.model.ScoreEffect;
 
-/**
- * Concrete builder for the storm: denser rain (one drop every 75 ms) with the same 60/40
- * proportion, in which beneficial drops are created with a strategy worth double points.
- */
 final class StormRainBuilder implements RainProfileBuilder {
     static final int BENEFICIAL_POINTS = 20;
 

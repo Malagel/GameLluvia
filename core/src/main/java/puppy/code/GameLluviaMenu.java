@@ -28,8 +28,7 @@ public class GameLluviaMenu extends Game {
         audioSettings = new AudioSettings(
                 new PreferencesSettingsStore(com.badlogic.gdx.Gdx.app.getPreferences(SETTINGS_PREFERENCES)));
         assets = new GameAssets(audioSettings);
-        // The singleton is created once here, the only place that knows how scores are stored.
-        // From then on every screen reaches it through HighScoreManager.getInstance().
+
         HighScoreManager.initialize(
                 new PreferencesScoreStore(com.badlogic.gdx.Gdx.app.getPreferences(SCORE_PREFERENCES)));
         setScreen(new MainMenuScreen(this));

@@ -21,9 +21,6 @@ public final class KeyboardPlayerInput implements PlayerInput {
         this.rightKeys = Objects.requireNonNull(rightKeys, "rightKeys").clone();
     }
 
-    /**
-     * Creates the game's default controls: the arrow keys and the A/D keys.
-     */
     public static KeyboardPlayerInput standard(Input input) {
         return new KeyboardPlayerInput(input, STANDARD_LEFT_KEYS, STANDARD_RIGHT_KEYS);
     }

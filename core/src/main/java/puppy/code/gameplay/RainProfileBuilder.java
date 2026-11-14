@@ -12,8 +12,5 @@ interface RainProfileBuilder {
 
     void buildHarmfulDrops();
 
-    /**
-     * Returns the profile assembled by the previous steps.
-     */
     DropSpawnProfile getProfile();
 }

@@ -50,9 +50,6 @@ public abstract class BaseUiScreen extends ScreenAdapter {
                 assets.getBatch());
     }
 
-    /**
-     * Text shown as this screen's title, above its content.
-     */
     protected abstract String getTitle();
 
     /**

@@ -26,7 +26,6 @@ import puppy.code.model.FallingItem;
 import puppy.code.model.Player;
 
 public final class GameScreen extends ScreenAdapter {
-    // How each weather phase looks. A new phase adds one entry per table, not a condition.
     private static final Map<Weather, Color> SKY_COLORS = new EnumMap<>(Weather.class);
     private static final Map<Weather, String> WEATHER_LABELS = new EnumMap<>(Weather.class);
 
@@ -84,7 +83,7 @@ public final class GameScreen extends ScreenAdapter {
 
     private void drawHud() {
         float top = GameConfig.WORLD_HEIGHT - 6.0f;
-        font.draw(batch, "Gotas totales: " + session.getScore(), 6.0f, top);
+        font.draw(batch, "Puntaje: " + session.getScore(), 6.0f, top);
 
         String lives = "Vidas : " + session.getLives();
         layout.setText(font, lives);

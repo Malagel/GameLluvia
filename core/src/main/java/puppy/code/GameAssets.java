@@ -56,7 +56,6 @@ public final class GameAssets implements Disposable {
         rainMusic = Gdx.audio.newMusic(Gdx.files.internal("rain.mp3"));
         rainMusic.setLooping(true);
 
-        // Registration of each drop kind's texture: a new kind adds one line here.
         dropTextures = new HashMap<>();
         dropTextures.put(GoodDrop.APPEARANCE, goodDropTexture);
         dropTextures.put(BadDrop.APPEARANCE, badDropTexture);

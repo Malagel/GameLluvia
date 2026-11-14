@@ -5,9 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Application-scoped owner of the local leaderboard.
- */
 public final class HighScoreManager {
     public static final int MAX_SCORES = 5;
 
@@ -72,9 +69,6 @@ public final class HighScoreManager {
         return true;
     }
 
-    /**
-     * Reports whether the in-memory ranking has not yet been saved successfully.
-     */
     public synchronized boolean hasPendingSave() {
         return savePending;
     }
@@ -92,9 +86,6 @@ public final class HighScoreManager {
         return saveCurrentRanking();
     }
 
-    /**
-     * Number of ranked scores, at most {@link #MAX_SCORES}.
-     */
     public synchronized int getScoreCount() {
         return scores.size();
     }

@@ -24,427 +24,428 @@
 
 # Updates and progress:
 
+## Review scope and status
+
+This review (2026-11-13) compares `README.md`, `docs.md`, the current Java sources
+and tests, and local Git history through `cbc7c2f`. The original academic
+requirements above are unchanged. Implemented code is distinguished from missing
+report artifacts; the presence of tests is not evidence that they currently pass.
+
+| Requirement | Current progress | Pending academic artifacts |
+| --- | --- | --- |
+| GM-1 | Player-facing explanation and in-game objective/controls implemented | Mockups or screenshots illustrating the game |
+| GM-2 | Base-game comparison documented below; current architecture described in `README.md` | No additional artifact specified beyond the analysis |
+| GM-3 | Java model and framework integration implemented; relationships described below | UML class diagram including LibGDX and custom classes |
+| GM-4 | Required abstract class and interface actively implemented | None specific to GM-4 |
+| GM-5 | Encapsulation, GRASP, and SOLID applications implemented and described | None specific to GM-5 |
+| GM-6 | Singleton code and problem/context/solution description complete | Singleton UML diagram |
+| GM-7 | Strategy code, runtime replacement, and problem/context/solution description complete | Strategy UML diagram |
+| GM-8 | Template Method code and problem/context/solution description complete | Template Method UML diagram |
+| GM-9 | Classical Builder roles and problem/context/solution description complete | Builder UML diagram |
+| GM-10 | GitHub remote and commit/merge history present; six-commit minimum exceeded | None evidenced by the local review |
+
+No screenshots or UML diagrams are supplied by this update. Runtime textures and
+launcher icons are assets, not substitutes for GM-1 screenshots or GM-3 diagrams.
+
+## GM-1 — Player perspective (description implemented; visual evidence pending)
+
+- **Premise and objective:** the player controls a bucket in the rain, collecting
+  beneficial blue drops and avoiding harmful red ones to earn the highest score
+  before losing all three lives. There is no separate story campaign implemented.
+- **Gameplay elements:** beneficial drops fall straight down and normally award
+  10 points. Harmful drops sway sideways while falling, remove one life when
+  caught, and trigger a brief hurt animation during which movement and gameplay
+  updates are suspended. Missing a drop does not remove a life.
+- **Progression:** at 300 points, calm rain becomes a storm for the remainder of
+  the session. The sky darkens, the HUD shows **¡Tormenta! Gotas x2**, the spawn
+  interval changes from 100 ms to 75 ms, and beneficial drops award 20 points.
+  Beneficial drops already falling also acquire the doubled reward at the
+  transition. Both phases retain the 60/40 beneficial/harmful distribution.
+- **Controls:** left arrow or A moves left; right arrow or D moves right. Holding
+  both directions cancels movement. The main menu explicitly explains the controls
+  and objective. No keyboard-remapping or dedicated pause-key binding is implemented;
+  pause/resume is handled by the existing screen/application lifecycle.
+- **Presentation and navigation:** the HUD reports current points (**Puntaje**,
+  not a count of collected drops) and lives, drawn after the drops so they remain
+  visible. The main menu offers **Jugar**, **Puntuaciones**, **Opciones**, and
+  **Salir**. Game over presents the completed score, retry, and main-menu actions.
+  The leaderboard displays up to five locally saved scores. Options changes music
+  and effects volumes independently from 0% to 100% in 10-point steps, saves changes
+  immediately when storage succeeds, and previews effects-volume changes.
+- `docs.md` contains the Spanish player overview, storm rules, and run instructions;
+  `README.md` documents controls and architecture. History records the harmful-drop
+  texture correction (`e0d9c82`), menu instructions (`d7f4a3d`), and HUD draw-order
+  correction (`2587caf`). A manual desktop review and representative screenshots
+  of the menu, calm/storm gameplay, leaderboard, options, and game over remain to
+  be supplied; no visual validation is claimed here.
+
+## GM-2 — Base game and engineering analysis (documented)
+
+- **Base game:** the initial commit `a62a50d` already supplied a LibGDX bucket-and-rain
+  game with three lives, 10-point beneficial drops, harmful drops, arrow-key input,
+  music/sounds, menu, pause, game over, and one in-memory high score. `Tarro` mixed
+  player state, input, drawing, and damage audio. `Lluvia` managed parallel position
+  and type arrays, spawning, collisions, scoring, rendering, and audio. The original
+  `GameScreen` coordinated these objects and advanced gameplay within rendering.
+- **Engineering problems:** those mixed responsibilities coupled rule changes to
+  presentation, exposed mutable geometry, and made behavior difficult to test
+  independently of input, timing, randomness, and graphics. Repeated screen setup
+  and asset ownership also complicated maintenance and resource cleanup.
+- **Modifications now implemented, rather than merely proposed:** the modular
+  `model`, `gameplay`, `input`, `score`, `settings`, and `screen` packages separate
+  state, rules, controls, persistence, and presentation. `GameAssets` owns shared
+  resources; `GameLluviaMenu` controls navigation. The game uses a 640x360 world
+  with `FitViewport` and a fullscreen desktop launcher. New behavior includes A/D
+  input, swaying harmful drops, score-driven storms, a persistent top-five ranking,
+  enabled audio options, and consistent Scene2D menus.
+- **Design response:** inheritance expresses movement variation; Strategy expresses
+  collision effects and their runtime replacement; Singleton coordinates the local
+  ranking; Template Method fixes menu construction/lifecycle; Builder assembles
+  calm/storm spawn profiles. Observer-style notifications deliver gameplay outcomes
+  without exposing event collections. The sections below connect these choices to
+  concrete classes, constraints, and existing tests.
+- **Scope:** additional control devices, new effects/drop kinds, more weather phases,
+  player accounts, and online rankings are possible extensions, not implemented
+  features. Local audio settings and the two-phase difficulty progression are
+  already implemented and must not be listed as future work.
+
+## GM-3 — Domain model and Java integration (code implemented; UML pending)
+
+- `GameLluviaMenu` extends LibGDX `Game` and coordinates `Screen` transitions;
+  `GameScreen`, `PauseScreen`, and `BaseUiScreen` extend `ScreenAdapter`. The four
+  concrete menu-style screens inherit from `BaseUiScreen`, which owns a Scene2D
+  `Stage`, `Table` layout, and `FitViewport` while sharing the application's assets.
+- `GameScreen` uses `PlayerInput` and a `GameSession`. The session owns `Player`,
+  active `FallingItem` instances, a listener, and an `EnumMap` of `Weather` to
+  `DropSource`. `DropSpawner` implements `DropSource` and consumes `DropSpawnProfile`.
+- `GoodDrop` and `BadDrop` extend `FallingItem`; each declares a `DropAppearance`.
+  The parent and `Player` privately own LibGDX `Rectangle` bounds. `FallingItem`
+  composes a `DropEffect`, implemented by `ScoreEffect` and `DamageEffect`, and
+  returns a `GameplayEvent` when applying it.
+- `RainProfileBuilder`, its two concrete builders, and `RainDirector` construct
+  the immutable profile. `HighScoreManager` uses `ScoreStore`, implemented by
+  `PreferencesScoreStore`; `AudioSettings` similarly uses `SettingsStore`, with
+  `PreferencesSettingsStore` as its production adapter.
+- These are relationships to represent in the required class diagram, not a UML
+  deliverable themselves. The diagram must include relevant LibGDX base classes,
+  custom classes, inheritance/interface realization, and ownership/dependencies.
+  GM-3 remains incomplete as an academic requirement until that artifact is supplied.
+
 ## GM-4 — Abstract class and interface (implemented)
 
-- `FallingItem` is the abstract parent class actively used by the gameplay loop. Its
-  `GoodDrop` and `BadDrop` subclasses identify the beneficial and harmful drop types
-  used by `DropSpawner` and `GameSession`; `GameScreen` renders their read-only type
-  projections.
-- `DropEffect` is the custom effect interface. Its concrete implementations are
-  `ScoreEffect`, which awards a configurable number of points, and `DamageEffect`,
-  which removes one player life and starts the existing damage animation.
-- Each `FallingItem` stores a `DropEffect` and delegates `applyTo(Player)` to that
-  interface. The strategy also reports the gameplay events caused by the operation.
-  The default `GoodDrop` uses a 10-point `ScoreEffect`, while the default `BadDrop`
-  uses a `DamageEffect`, preserving the existing gameplay values.
-- Both required abstractions are therefore exercised during normal play: the session
-  processes different items through the `FallingItem` parent type, and collision
-  behavior is invoked polymorphically through `DropEffect`.
+- `FallingItem` is the abstract parent used throughout the active-item gameplay
+  loop. Its `GoodDrop` and `BadDrop` subclasses provide distinct visual identities
+  and movement: straight falling versus sinusoidal horizontal drift. The final
+  `fall(float)` template applies common vertical speed and delegates sideways
+  movement to the protected `horizontalDrift(float)` hook, clamping drift inside
+  the world. Inheritance therefore contributes behavior, not just type labels.
+- `DropEffect` is the required interface with two active implementations:
+  `ScoreEffect` awards configurable positive points and `DamageEffect` removes
+  one life and starts the hurt state. `FallingItem.applyTo(Player)` invokes the
+  selected strategy polymorphically and returns its single non-null outcome.
+- Default beneficial drops use a 10-point reward and harmful drops use damage;
+  storm builders create beneficial drops with a 20-point strategy. Runtime
+  replacement is described under GM-7. `RainProfileBuilder` additionally has two
+  concrete implementations, both used when a normal session is constructed.
+- Existing `FallingItemMotionTest` and `DropEffectTest` exercise the movement and
+  effect contracts. Test execution status is recorded separately below.
 
 ## GM-5 — Encapsulation, GRASP, and SOLID (implemented)
 
-### Problems identified and focused changes
+### Encapsulation and current interaction contracts
 
-- `GameSession` previously inferred collision results from `FallingItem.Type.GOOD`
-  or `BAD`. This coupled a drop's visual identity to its behavior and produced an
-  incorrect event when a different strategy was injected. `DropEffect.apply` now
-  returns the `GameplayEvent` values produced by the actual effect, and
-  `GameSession` forwards those events without inspecting drop type. A list is used
-  so a future combined effect can report several outcomes without changing the
-  strategy contract.
-- `GameScreen.drawPlayer()` previously advanced the hurt counter as a rendering side
-  effect. `GameSession.update()` now advances it after each gameplay update, including
-  suspended damage frames and the collision frame. Rendering only reads the hurt
-  state and draws it. The original 50-frame animation, movement/gameplay suspension,
-  and collision-frame timing are preserved.
-- `GameSession` previously depended directly on `DropSpawner`, which made focused
-  tests depend on time and randomness. The package-level `DropSource` abstraction now
-  separates session control from spawn policy; `DropSpawner` remains the production
-  implementation with the same interval, probability, positions, and speed.
-- Presentation remains in `GameScreen`: it maps `FallingItem.Type` to textures and
-  `GameplayEvent` to sounds. Effects mutate domain state and report outcomes but do
-  not load assets, play audio, or perform collision detection.
+- `Player` owns private position, score, lives, and hurt duration; `FallingItem`
+  owns private bounds and its replaceable effect; `GameSession` owns the player
+  and active-item list. Behavior methods, rather than exposed fields or rectangles,
+  perform mutation. Lives cannot become negative, positive awards saturate at
+  `Integer.MAX_VALUE`, and `ScoreEffect` rejects non-positive point values.
+- `DropEffect.apply(Player)` returns exactly one `GameplayEvent`, not an event
+  list. `FallingItem.applyTo(Player)` rejects a null player or returned event, and
+  `setEffect(DropEffect)` rejects null strategies. The old multi-event result,
+  defensive event-list copies, and `UpdateResult` are no longer the contract.
+- `GameSession.update(...)` returns no result collection. It pushes each collision
+  outcome to the `GameplayListener` supplied at construction. `GameScreen` registers
+  `GameAssets::playEventSound`; the event follows the actual effect, not the visual
+  identity of the drop. No collision means no notification.
+- `forEachFallingItem(FallingItemConsumer)` supplies only appearance and x/y values.
+  Screens receive neither a collection nor mutable `FallingItem` references.
+  `GameScreen` reuses a drawing callback created once; the obsolete item-list
+  projections and per-frame event snapshots are not used.
+- `HighScoreManager` exposes only `getScoreCount()` and `getScore(int)` for ranking
+  reads. `DropSpawnProfile` copies registrations on construction and performs
+  weighted selection internally through `createDrop(roll, x, y)`; registrations
+  remain private. These owners expose operations, not collection getters.
+- `GameSession.update()` advances the 50-frame hurt animation, including the
+  collision frame and suspended frames. Rendering reads hurt state without
+  changing its duration.
 
-### Encapsulation
+### Presentation boundaries and extension points
 
-- Mutable state remains private: `Player` owns its rectangle, lives, score, and hurt
-  counter; `FallingItem` owns its bounds and selected strategy; `GameSession` owns
-  the player and active-item collection. Changes go through behavior such as
-  `move`, `takeDamage`, `fall`, and `applyTo`, rather than exposed fields.
-- `Player.takeDamage()` prevents lives from becoming negative, and positive score
-  awards saturate at `Integer.MAX_VALUE` instead of overflowing. `ScoreEffect`
-  rejects non-positive awards, while `FallingItem` rejects null players, strategies,
-  result lists, and event entries. These checks protect gameplay invariants at their
-  owning boundaries.
-- `GameSession.getFallingItems()` exposes an unmodifiable list of read-only
-  projections containing only position and visual type. Mutable `FallingItem`
-  references remain private to the session. Each projection is created once when an
-  item spawns and reused while active, avoiding per-frame snapshots. `UpdateResult`
-  and `FallingItem` also defensively copy their event lists before exposing them.
+- `GameAssets` is the single mapping from `DropAppearance` to textures and from
+  `GameplayEvent` to sounds. Drop appearances are identity objects declared by
+  subclasses, not a `FallingItem.Type` enum that lists the parent's subclasses.
+  The texture registry is a private map; the sound registry is an `EnumMap` checked
+  for completeness at startup. Missing texture registrations fail on lookup.
+- `GameScreen` asks `getDropTexture(appearance)` when drawing and does not branch on
+  drop kinds or gameplay events. It uses per-weather `EnumMap` tables for sky colors
+  and HUD labels. Domain effects do not load assets, play audio, or navigate screens.
+- `Weather` declares phase thresholds and computes the phase from score. The session
+  stores a `DropSource` per phase in an `EnumMap` and requires every phase to have
+  a source. Adding a phase still requires configuring that source and its visual
+  mappings; adding a drop appearance requires registering its texture. These are
+  explicit composition/presentation changes, not a claim of unlimited extension
+  without edits.
 
-### GRASP
+### GRASP and SOLID applications
 
-- **Information Expert:** `Player` updates movement, lives, score, and hurt duration;
-  each `DropEffect` knows how to apply and describe its own outcome; `DropSpawner`
-  owns timing and random drop selection; `FallingItem` owns falling and overlap data.
-- **Controller:** `GameSession.update()` coordinates input, spawning, movement,
-  collisions, effect execution, removal, game-over detection, and animation progress.
-  `GameScreen` translates framework input into that call and presents its result.
-- **High Cohesion:** domain mutation stays in model/effect classes, session flow in
-  `GameSession`, creation policy in `DropSpawner`, and drawing/audio in `GameScreen`.
-- **Low Coupling:** `GameSession` depends on `DropSource` and `DropEffect` outcomes
-  rather than random/time APIs, concrete effects, or `GOOD`/`BAD` conditionals.
-- **Polymorphism:** the loop handles every drop as `FallingItem`, applies behavior via
-  `DropEffect`, and obtains drops through `DropSource`; concrete subclasses and
-  strategies supply their variations.
-- **Protected Variations:** effect behavior and spawn policy are behind stable
-  interfaces. New drop subclasses may provide a distinct identity and default effect,
-  while new strategies can return the appropriate event or multiple events.
-- **Pure Fabrication / Indirection:** `GameSession` is a cohesive gameplay controller
-  and `DropSource` is a small seam between it and nondeterministic spawning. This seam
-  also enables deterministic unit tests without adding a factory or registry.
+- **Information Expert / High Cohesion:** `Player` protects player invariants,
+  effects own collision consequences, the profile owns weighted selection,
+  `DropSpawner` owns timing/randomness/positions, and assets own resource mappings.
+- **Controller / Pure Fabrication:** `GameSession` coordinates movement, spawning,
+  collisions, removal, weather, game over, and hurt progress. `GameLluviaMenu`
+  coordinates application navigation; screens present state and actions.
+- **Low Coupling / Indirection / Protected Variations:** `DropSource` separates
+  sessions from nondeterministic spawning; effect, input, and persistence interfaces
+  isolate their respective variations. Listener and drawing callbacks avoid exposing
+  internal collections or model references to screens.
+- **Polymorphism / Liskov Substitution:** the loop processes every drop through
+  `FallingItem`, movement varies through its hook, and effects through `DropEffect`.
+  Injecting damage into a visually beneficial drop, or points into a harmful one,
+  still produces the corresponding state and event.
+- **Single Responsibility / Dependency Inversion:** state, effects, profile
+  construction, runtime spawning, input, ranking, persistence, and presentation have
+  focused owners. Dependencies use `DropEffect`, `DropSource`, `PlayerInput`,
+  `ScoreStore`, and `SettingsStore` at the relevant boundaries.
+- **Open/Closed / Interface Segregation:** narrow contracts permit new effects,
+  movement subclasses, devices, or persistence adapters without rewriting their
+  consumers. The effect contract intentionally reports one event; combined or
+  multi-event effects are not an implemented feature. Singleton callers still depend
+  on `HighScoreManager`'s global access point, a deliberate tradeoff rather than
+  complete dependency injection.
 
-### SOLID
+### Player input and audio options
 
-- **Single Responsibility:** `FallingItem` handles shared falling-item state and
-  effect delegation, effects implement collision consequences, `DropSpawner` decides
-  when/which item appears, `GameSession` controls gameplay, and `GameScreen` presents
-  state. The boundaries are pragmatic: `GameSession` still coordinates several steps
-  because that is its controller responsibility.
-- **Open/Closed:** new `FallingItem` subclasses and `DropEffect` implementations can
-  be added without changing collision execution. Returning event lists also permits
-  a future combined strategy. A genuinely new texture identity or event still
-  requires extending the presentation mapping; this is an intentional, explicit
-  limitation rather than a speculative registry.
-- **Liskov Substitution:** `GoodDrop` and `BadDrop` obey the `FallingItem` contract and
-  are processed uniformly. Injecting `DamageEffect` into a visually good drop or
-  `ScoreEffect` into a visually bad drop still produces correct state and events,
-  demonstrating that behavior does not rely on subclass identity.
-- **Interface Segregation:** `DropEffect` contains only effect application/reporting,
-  and the internal `DropSource` contains only the two operations the session needs.
-  Neither forces implementations to depend on rendering or session details.
-- **Dependency Inversion:** `FallingItem` depends on the `DropEffect` abstraction and
-  `GameSession` depends on `DropSource`; constructors supply the concrete strategies
-  and production spawner. `GameScreen` consumes immutable event results rather than
-  inspecting effect implementations.
+- `PlayerInput` exposes only `isMovingLeft()` and `isMovingRight()`.
+  `KeyboardPlayerInput` reads an injected LibGDX `Input`, defensively copies custom
+  key arrays, and `standard(Input)` binds arrows and A/D simultaneously.
+  `GameLluviaMenu` supplies it when creating `GameScreen`; the screen no longer
+  reads movement keys directly. Other devices remain future implementations.
+- `OptionsScreen` is implemented, not a disabled placeholder. `AudioSettings` owns
+  bounded music/effects percentages, normalizes saved values, and saves through
+  `SettingsStore`. `PreferencesSettingsStore` is the LibGDX adapter. Failed saves
+  retain the selected in-memory volume, without claiming durable persistence.
+  `GameAssets` applies effects volume on playback and music volume when starting
+  the rain music.
+- Existing tests cover effect/identity independence, invalid/null contracts, score
+  saturation, hurt progression, callback visitation and notifications, keyboard
+  bindings, and audio settings. Relevant suites include `DropEffectTest`,
+  `GameSessionTest`, `KeyboardPlayerInputTest`, and `AudioSettingsTest`.
 
-### Verification and future considerations
+## GM-6 — Singleton and persistent local leaderboard (code and description complete; UML pending)
 
-- Unit tests cover the unchanged 10-point and one-life defaults, configurable and
-  saturating score behavior, invalid score values, read-only item projections,
-  identity/effect independence in both directions, defensive Strategy results, and
-  hurt-animation advancement with movement suspended for the original duration.
-- Future healing, bonus, temporary, or combined effects can implement `DropEffect`;
-  future visual identities can extend `FallingItem.Type` and the texture mapping.
-  Those features are deliberately not included in GM-5. If the number of identities
-  or presentation events grows substantially, a dedicated presentation descriptor or
-  mapper may become worthwhile, but adding one now would add indirection without a
-  current need.
+### Problem and context
 
-### Follow-up: player input separation (implemented)
+The base game stored one high-score integer in the application, losing it on exit
+and mixing it with session information in the HUD. Recording completed results and
+showing a separate persistent ranking need one authoritative application-level
+coordinator, without making screens responsible for ranking or storage formats.
 
-- **Problem:** `GameScreen` both presented the game and read the keyboard (arrow keys,
-  and later A/D). Control bindings were therefore mixed with rendering and audio, and
-  that behavior had no unit tests.
-- **Solution:** the `PlayerInput` interface (`isMovingLeft()`, `isMovingRight()`)
-  expresses the player's intent. `KeyboardPlayerInput` is the production
-  implementation: it reads an injected LibGDX `Input`, accepts several keys per
-  direction, and `standard(Input)` binds the arrow keys and A/D simultaneously.
-  `GameLluviaMenu` supplies it to `GameScreen`; `GameSession` and `Player` are unchanged.
-- **GRASP:** Information Expert and High Cohesion (key bindings live in one class),
-  Low Coupling and Protected Variations (`GameScreen` depends on an interface, not on
-  the keyboard), and Polymorphism (control schemes are interchangeable).
-- **SOLID:** Single Responsibility (the screen presents, the input class reads
-  controls), Open/Closed (a new device is a new implementation), Interface Segregation
-  (two methods only), and Dependency Inversion (`GameScreen` receives the abstraction
-  through its constructor).
-- **Verification:** `KeyboardPlayerInputTest` uses a mocked `Input` to cover each
-  scheme, mixed schemes, ignored keys, custom bindings, defensive copying, and null
-  arguments.
-- **Not included:** actions other than horizontal movement (pause, exit) and key
-  remapping are deliberately omitted until the game needs them.
-- **Report note (GM-1):** the controls to describe are left arrow or A (left) and right
-  arrow or D (right).
+### Solution and participants
 
-## GM-6 — Singleton and persistent local leaderboard (code implemented; UML pending)
+- `HighScoreManager` is the application-scoped Singleton. Its constructor is private;
+  `initialize(ScoreStore)` creates the instance once, `getInstance()` rejects access
+  before initialization, and `shutdown()` ends the lifecycle without deleting scores.
+  Repeated initialization returns the existing instance.
+- `GameLluviaMenu.create()` initializes it with `PreferencesScoreStore`; the application
+  does not retain a manager field or expose a forwarding getter. `showGameOver()`
+  records through `HighScoreManager.getInstance()` before navigation, and
+  `LeaderboardScreen` accesses the same Singleton directly. This access refactor is
+  recorded in `e07e6c4`. Application disposal shuts it down after screens/assets.
+- `ScoreStore` isolates ranking logic from LibGDX. The production Preferences adapter
+  stores the complete comma-separated ranking in one entry and flushes writes.
+  The manager sorts descending, retains at most five scores, preserves ties from
+  distinct games, discards malformed/negative loaded values, and normalizes saved
+  data when necessary. Missing or blank data gives an empty ranking.
+- `recordScore(id, score)` rejects invalid ids/scores and ignores repeated or older
+  completion ids, even for scores outside the top five. Only the latest handled id
+  is retained in memory; persisted data contains scores, not accumulated ids.
+- A failed save keeps the accepted score/id in memory and sets `hasPendingSave()`.
+  `retryPendingSave()` safely rewrites the complete ranking; a duplicate completion
+  can also trigger a retry without inserting again. Acceptance does not imply a
+  successful durable save.
+- Ranking reads use count and zero-based positional access, never snapshots or
+  `getScores()`. The leaderboard builds descending rows or **Aún no hay puntuaciones.**
+  and offers **Volver**. Game over shows the completed score and retry/menu actions;
+  the gameplay HUD contains session score/lives, not the persistent ranking.
 
-### Problem and architectural context
+### Design, tests, and remaining work
 
-- The game previously retained one high-score integer only in `GameLluviaMenu`, so
-  it was lost when the application closed and could not represent a ranking. The
-  gameplay HUD also mixed session information with that application-level value,
-  and the menu had no route for consulting saved results.
-- A leaderboard is shared application state: gameplay writes completed results and
-  a separate screen reads them. It must have one authoritative ranking and one
-  persistence lifecycle without making screens responsible for file formats or
-  storage cleanup.
+Ranking is an Information Expert with high cohesion; `ScoreStore` provides
+Indirection and Dependency Inversion, and screens remain presentation-only. The
+Singleton supplies the requested shared lifecycle but introduces global access;
+it does not own graphics/audio resources or model accounts/online services.
+`HighScoreManagerTest` covers identity/initialization, top-five ordering, ties,
+positional bounds, simulated restarts, normalization, malformed data, duplicate
+completion protection, save failures, and retries. The Singleton UML diagram is
+still pending; enabled audio options are already implemented separately.
 
-### Singleton solution and controlled lifecycle
+## GM-7 — Strategy pattern (code and description complete; UML pending)
 
-- `HighScoreManager` is the single owner of ranking rules and saved-score access.
-  Its constructor is private. `initialize(ScoreStore)` creates the instance once,
-  `getInstance()` provides controlled access only after initialization, and
-  `shutdown()` ends the application-scoped lifecycle without deleting persisted
-  scores. The instance contains no textures, audio, stages, or other disposable
-  LibGDX resources.
-- `GameLluviaMenu.create()` supplies a `PreferencesScoreStore` and retains the
-  returned singleton for dependency access by screens. `dispose()` shuts down the
-  singleton after disposing the current screen and shared assets. Repeated
-  initialization during the same lifecycle returns the same object.
-- The Singleton is appropriate here because the local ranking must have exactly one
-  coordinator during an application run. Storage remains behind the `ScoreStore`
-  interface, avoiding a global dependency on LibGDX inside ranking logic and
-  allowing simulated restarts in unit tests.
+### Problem and context
 
-### Storage, ranking, and duplicate protection
+A drop's appearance must not determine its collision consequence. The same
+beneficial drop should award a different reward during a storm, including when it
+was created before the weather changed. Selecting behavior only in constructors
+would not demonstrate replacing the strategy of an existing object during play.
 
-- `PreferencesScoreStore` uses one LibGDX Preferences entry. Scores are serialized
-  in descending order, and every write replaces that complete entry. The manager
-  sorts after loading or recording and truncates its owned list to five before it
-  writes, so results outside the top five are removed from persistent storage and
-  cannot accumulate in hidden keys.
-- Missing or blank data produces an empty ranking. Malformed or negative values are
-  discarded while valid values are retained; overlong or noncanonical saved data is
-  rewritten in normalized top-five form. Equal scores from distinct games remain
-  valid separate leaderboard entries.
-- Every started game receives an application-local positive completion identifier.
-  `recordScore(id, score)` remembers the latest monotonically increasing identifier
-  handled in the current lifecycle and ignores repeated callbacks for the same or
-  an older completed game, including when its score did not enter the top five. The
-  persisted data intentionally contains only the five scores; completion identifiers
-  do not accumulate in memory or on disk.
-- If `ScoreStore.save()` fails, the accepted score and completion identifier remain
-  valid in memory, the manager marks the ranking as pending, and the exception does
-  not interrupt game-over navigation. `hasPendingSave()` exposes that status, and
-  `retryPendingSave()` rewrites the complete serialized top-five ranking. Repeated
-  writes are therefore safe, and a duplicate completion can trigger a retry without
-  adding the score twice. `recordScore` reports acceptance, not persistence success.
-- `getScores()` returns an unmodifiable defensive copy, so screens cannot mutate the
-  manager's state.
+### Solution and participants
 
-### Screen integration and navigation
+- **Strategy:** `DropEffect` declares `apply(Player)` and the default
+  `intensified()` operation. **ConcreteStrategies:** `ScoreEffect` and `DamageEffect`.
+  **Context:** `FallingItem`, whose final `applyTo(Player)` delegates to its current
+  effect and returns one validated `GameplayEvent`.
+- Drop constructors select defaults or accept an injected effect. `setEffect(...)`
+  can replace that effect on an existing item, and `intensify()` installs the
+  strategy returned by the current effect's `intensified()` method. `ScoreEffect`
+  returns a doubled, saturating reward; damage retains the same strategy by default.
+- `Weather.STORM` starts at 300 points. When the session detects the transition,
+  it intensifies all remaining active items, so already-falling beneficial drops
+  change from 10 to 20 points without changing their identity or motion. Subsequent
+  drops come from the storm source, whose builder injects a 20-point reward.
+  Score never decreases, so the storm persists to game over.
+- The session emits the event returned by the actual strategy through its listener;
+  presentation maps it to audio. Neither `FallingItem` nor the session switches on
+  concrete effect types. Motion inheritance and collision composition remain
+  independent axes of variation.
 
-- The redesigned Scene2D main menu shows **Game Lluvia** and the **Jugar**,
-  **Puntuaciones**, and disabled **Opciones - Próximamente** buttons. Its stage uses
-  the existing 640x360 `FitViewport`, keeping pointer coordinates correct after a
-  resize.
-- `LeaderboardScreen` reads the manager's snapshot, displays ranked scores in
-  descending order, shows **Aún no hay puntuaciones.** for an empty ranking, and
-  returns through **Volver**. It contains no persistence or ranking logic.
-- `GameOverScreen` shows the completed score and supplies **Reintentar** and
-  **Menú principal** actions. `GameLluviaMenu.showGameOver()` records the result
-  before navigation. `GameScreen` sends its game identifier with the score and no
-  longer draws a high score in the HUD; current score, lives, gameplay, sound,
-  music, pause, and resume behavior remain unchanged.
-- The small generated UI texture remains owned and disposed by `GameAssets`. Each
-  menu-oriented screen owns only its stage and clears its input processor when it
-  is hidden, preserving the established resource-ownership model.
+`DropEffectTest` covers delegation, replacement on the same context, intensified
+rewards/damage, null rejection, and saturation. `GameSessionTest` covers the storm
+threshold, calm behavior below it, source switching, and intensified drops already
+falling. `RainBuilderTest` compares calm/storm rewards for the same drop class and
+appearance. History distinguishes initial weather-based selection (`f6da544`)
+from replacement on existing objects (`00c625d`). Code and problem/context/solution
+are complete; the academic Strategy UML diagram remains pending. Healing,
+temporary effects, and multi-event outcomes are not implemented.
 
-### GRASP and SOLID considerations
+## GM-8 — Template Method for UI screens (code and description complete; UML pending)
 
-- **Information Expert / High Cohesion:** `HighScoreManager` owns ranking and
-  validation, the store adapter owns Preferences calls, screens own presentation,
-  and `GameLluviaMenu` remains the navigation controller.
-- **Low Coupling / Indirection / Dependency Inversion:** score logic depends on the
-  narrow `ScoreStore` abstraction. Neither the manager nor its tests depend on a
-  stage, renderer, or active LibGDX runtime.
-- **Single Responsibility:** persistence access, ranking policy, navigation,
-  resource ownership, and UI presentation remain in separate focused classes.
-  `ScreenUi` centralizes only the shared visual styles so the three Scene2D screens
-  are easy to restyle consistently.
-- **Open/Closed and Interface Segregation:** another local persistence mechanism can
-  implement the two-method `ScoreStore` contract without changing ranking logic.
-  No player/account, online service, settings system, or speculative repository
-  hierarchy was added.
+### Problem and context
 
-### Verification and remaining academic work
+Menu-style screens shared stage/viewport setup, input registration, frame updates,
+resizing, disposal, title placement, and button styling. Copying that workflow let
+lifecycle fixes or layout conventions diverge. The common sequence belongs in a
+parent; only the title, screen content, and action callbacks need to vary.
 
-- `HighScoreManagerTest` covers Singleton identity and initialization control,
-  descending order, equal scores, the top-five limit, read-only access, persistence
-  across simulated restarts, physical normalization of overlong storage, empty and
-  malformed data, duplicate completed-game protection, retained in-memory state on a
-  save failure, pending status, and safe retry without duplication.
-- The complete Gradle test suite passes, including the pre-existing gameplay and
-  strategy tests, and both core and desktop sources compile successfully.
-- The code-level GM-6 implementation is complete. The GM-6 UML diagram required by
-  the academic specification is deliberately still pending, as this iteration does
-  not create that diagram. Configurable options, player identities, accounts,
-  online leaderboards, and extra score metadata are also intentionally outside
-  scope.
+### Solution and participants
 
-## GM-7 — Strategy pattern (partially implemented)
+- `BaseUiScreen` extends `ScreenAdapter` and is the abstract Template Method parent.
+  `MainMenuScreen`, `LeaderboardScreen`, `GameOverScreen`, and `OptionsScreen` are
+  its four concrete participants. `GameScreen` and `PauseScreen` deliberately remain
+  outside the hierarchy.
+- Final `show`, `render`, `resize`, `hide`, and `dispose` methods fix the workflow:
+  initialize UI once, register the stage for input, clear/act/draw with capped delta,
+  center the viewport on resize, clear input only if this stage owns it, and dispose
+  the stage at most once. Shared batch/font/textures remain owned by `GameAssets`.
+- UI construction is itself a fixed sequence: create a per-screen `ScreenUi` widget
+  kit and fill-parent root table, add `ui.title(getTitle())`, then place a content
+  table below it and call `buildContent(Table content, ScreenUi ui)`.
+  Those two protected abstract methods are the current variation points; the former
+  `buildUi(Stage, GameAssets)` hook is no longer used. Title placement is part of the
+  template, not duplicated by each screen (`484a1d8`).
+- Construction occurs on first `show` (also ensured by `render`), after the concrete
+  constructor has initialized its fields. Re-showing does not duplicate actors;
+  rendering or resizing a disposed screen is rejected. `ScreenUi` centralizes styles,
+  labels, titles, Runnable-backed buttons, and standard menu-button rows without
+  taking on navigation or resource ownership.
 
-- The collision-effect architecture implements the code-level Strategy roles:
-  `DropEffect` is the strategy interface, `ScoreEffect` and `DamageEffect` are the
-  concrete strategies, and `FallingItem` is the context that delegates the effect.
-- `GoodDrop` and `BadDrop` select their existing default strategies. They also accept
-  an injected `DropEffect`, allowing collision behavior to be configured without
-  changing `FallingItem` or coupling it to a concrete effect implementation.
-- Runtime gameplay already executes the selected strategy when `GameSession` detects
-  a collision. The strategy reports its actual `GameplayEvent` values; drop type is
-  independent and is used only to select the current presentation texture. Thus an
-  injected strategy cannot cause one outcome while the session reports another.
-- `FallingItem` validates that a strategy returns a non-null list with no null
-  entries, then returns an unmodifiable defensive copy. Tests cover multiple events,
-  no events, invalid null results and entries, and mutable source lists.
-- The Strategy implementation itself is complete in code. GM-7 as an academic
-  requirement remains partial because its required problem/context/solution
-  description and UML diagram have not yet been produced; those artifacts are
-  outside the scope of this change.
-- Additional drop types and effects (including healing, temporary, or combined
-  effects) are planned for future iterations and are explicitly not implemented here.
+This applies High Cohesion, Protected Variations, SRP, and Open/Closed: compatible
+screens implement the two variable steps rather than copying lifecycle/layout
+code. Final operations protect common sequencing and resource invariants.
+`BaseUiScreenTest` covers one-time initialization, title-before-content composition,
+input ownership, capped updates/drawing, centered resizing, disposal, final lifecycle
+methods, and all four subclasses. Actual appearance, pointer coordinates after
+resize, and navigation/audio need manual desktop verification. The UML diagram
+remains pending; Options is already a concrete implementation, not future work.
 
-## GM-8 — Template Method for UI screens (code implemented; UML pending)
+## GM-9 — Builder for rain profiles (code and description complete; UML pending)
 
-### Problem and architectural context
+### Problem and context
 
-- `MainMenuScreen`, `LeaderboardScreen`, and `GameOverScreen` repeated the same
-  Scene2D lifecycle: create a stage and `FitViewport`, apply the initial window size,
-  register and remove the input processor, clear/update/draw every frame, resize the
-  viewport, and dispose the stage. Maintaining these copies made a lifecycle fix
-  easy to omit from one screen and would have duplicated the same code again in a
-  future Options menu.
-- These three screens have the same rendering workflow and differ only in their UI
-  actors and callbacks, making Template Method a direct fit. `GameScreen` and
-  `PauseScreen` retain their separate rendering and interaction responsibilities and
-  deliberately remain outside this hierarchy.
+Embedding interval, distribution, and constructors in the runtime spawner mixed
+configuration with time/randomness. Calm and storm rain need the same construction
+steps but different values and beneficial strategies. The current implementation
+uses the classical Builder roles, not only a fluent configuration helper.
 
-### Implemented solution and participants
+### Solution and participants
 
-- `BaseUiScreen` is the abstract Template Method parent and extends LibGDX
-  `ScreenAdapter`. `MainMenuScreen`, `LeaderboardScreen`, and `GameOverScreen` are
-  the concrete participants. `ScreenUi` continues to supply their shared label and
-  button styles without taking on lifecycle responsibilities.
-- The parent creates a stage with the shared `GameAssets` batch and a 640x360
-  `FitViewport`. Its final `show`, `render`, `resize`, `hide`, and `dispose` methods
-  define the common algorithm: initialize screen content once, register input,
-  clear the frame, advance the stage with the existing capped delta, draw it, update
-  and center the viewport after resizing, unregister input only when the stage owns
-  it, and dispose the stage once.
-- Concrete screens override the protected `buildUi(Stage, GameAssets)` hook. The
-  main menu builds its title and four existing actions, the leaderboard builds its
-  saved top-five or empty state and return action, and game over builds its completed
-  score and retry/menu actions. Navigation remains delegated to `GameLluviaMenu`.
-- UI construction is lazy on first `show` (and defensively ensured by `render`), so
-  the abstract hook is never called from the base constructor before fields such as
-  the completed-game score have been initialized. Re-showing a screen does not add
-  its actors again, and attempting to render or resize an already disposed screen is
-  rejected.
+- **Builder:** package-level `RainProfileBuilder` declares `buildSpawnInterval()`,
+  `buildBeneficialDrops()`, `buildHarmfulDrops()`, and `getProfile()`.
+- **ConcreteBuilders:** `CalmRainBuilder` supplies 100 ms, beneficial/harmful weights
+  6/4, and default 10-point beneficial drops. `StormRainBuilder` supplies 75 ms,
+  the same 6/4 weights, and beneficial drops with an injected 20-point `ScoreEffect`.
+- **Director:** `RainDirector.construct(builder)` fixes interval, beneficial, harmful,
+  then result retrieval in that order. Registration order assigns rolls 0–5 to
+  beneficial drops and 6–9 to harmful drops for both standard profiles.
+- **Product:** immutable `DropSpawnProfile`. Each concrete builder uses its nested
+  fluent `DropSpawnProfile.Builder` internally to assemble/validate the product.
+  This helper remains useful but is not a substitute for the Builder interface,
+  ConcreteBuilders, and Director added in `dc1c1f1`.
+- **Client/integration:** `GameSession.standardRain()` constructs both profiles through
+  the director, wraps them in `DropSpawner` instances, and registers one `DropSource`
+  per weather phase. `DropSpawner` takes a profile; the former no-argument constructor
+  and `standardProfile()` convenience method are no longer present.
+- The product validates a positive, nanosecond-representable interval, nonempty
+  registrations, positive weights, non-null factories, and a non-overflowing total.
+  It defensively copies registrations without exposing them and performs weighted
+  selection itself. Out-of-range rolls and null factory results are rejected.
+- `DropSpawner` owns only timing, randomness, and spawn positions, delegating selection
+  to the profile. Initial calm drops are immediate; subsequent spawns require elapsed
+  time strictly greater than the configured interval. The horizontal range includes
+  both world boundaries, and new items start at world height. Builder configures
+  creation; Strategy independently controls collision consequences and replacement.
 
-### Template Method, GRASP, and SOLID
+Construction, immutable selection rules, runtime spawning, and session control are
+separate cohesive responsibilities (Information Expert, Creator, SRP, and Protected
+Variations). `RainBuilderTest` covers director step order and both concrete profiles,
+including storm reward injection and unchanged harmful effects. `DropSpawnProfileTest`
+covers validation, weighted boundaries, null results, and independence after fluent
+builder reuse; `DropSpawnerTest` covers deterministic selection, timing, and positions.
+Storm difficulty is implemented, while further profiles or UI-created configurations
+remain possible extensions. The required Builder UML diagram is still pending.
 
-- The implementation is a Template Method rather than a shared-field superclass:
-  the abstract parent owns and fixes the lifecycle operations and calls the
-  variation hook at the defined initialization step. Marking the critical lifecycle
-  methods final prevents a concrete menu from silently bypassing input cleanup,
-  viewport handling, frame sequencing, or disposal.
-- **Information Expert / High Cohesion:** the base screen owns the lifecycle of its
-  stage, each concrete screen owns its particular presentation, `ScreenUi` owns
-  styling, and `GameLluviaMenu` remains the navigation controller.
-- **Low Coupling / Protected Variations:** concrete screens no longer depend on the
-  details of common Scene2D setup, while a future menu-style screen can vary only
-  the actor-building hook. The base uses the existing `GameAssets` boundary and does
-  not create or dispose shared resources.
-- **Single Responsibility and Open/Closed:** lifecycle changes now have one reason
-  and one place to change; another compatible UI screen can extend the template
-  without copying it. The narrow hook avoids speculative factories or additional
-  inheritance layers. Final workflow methods preserve substitutability and resource
-  invariants for all concrete screens.
+## GM-10 — GitHub and commit history (minimum exceeded)
 
-### Verification and remaining work
+- The configured `origin` is `https://github.com/Malagel/GameLluvia.git`. Local history
+  through `cbc7c2f` contains 58 reachable commits, exceeding the six-commit minimum,
+  with feature, refactoring, test, and documentation commits and GitHub pull-request
+  merge records (#2 through #6).
+- Traceable milestones include the base import (`a62a50d`), responsibility separation
+  (`1d2d8aa`), Strategy abstractions (`5c76913`), persistent Singleton (`3441f85`),
+  UI template (`0103775`), initial profile builder (`c382fa2`), input abstraction
+  (`27a32db`, `f519e17`), and enabled options (`6e162d9`).
+- Later feedback is represented by non-collection gameplay APIs (`387e592`), positional
+  ranking (`84c3163`), appearance/weather extension points (`ac0cc44`), live strategy
+  replacement (`00c625d`), title/content template steps (`484a1d8`), and classical
+  Builder roles (`dc1c1f1`), followed by the architecture documentation update
+  (`67d2b39`) and merge (`cbc7c2f`).
+- This evidence comes from local Git history and remote configuration. No network
+  fetch or live GitHub verification is claimed by this documentation review.
 
-- `BaseUiScreenTest` verifies one-time initialization, input registration and
-  conditional cleanup, capped stage update and drawing, centered viewport resizing,
-  idempotent stage disposal, non-disposal of shared assets, rejection of reuse after
-  disposal, final lifecycle methods, and participation of all three concrete UI
-  screens. The existing gameplay, Strategy, and Singleton tests remain in the same
-  suite.
-- Automated unit tests cannot validate the appearance of Scene2D widgets or perform
-  real desktop pointer interaction. Manual desktop verification should confirm the
-  unchanged labels and layout, every menu transition and exit action, empty and
-  populated leaderboards, retry/main-menu actions, and correct pointer coordinates
-  after resizing to different aspect ratios.
-- The code implementation for GM-8 is complete. The UML diagram required by the
-  academic GM-8 specification remains pending and is intentionally distinguished
-  from this completed refactor. The planned Options screen is also not implemented;
-  it can use `BaseUiScreen` when its requirements are defined.
+## Verification status and remaining deliverables
 
-## GM-9 — Builder for drop spawn configuration (code implemented; UML pending)
-
-### Problem and architectural context
-
-- `DropSpawner` previously embedded its 100 ms interval and selected `GoodDrop` or
-  `BadDrop` with a fixed conditional. Adding a third drop, changing a distribution,
-  or defining a separate configuration would have required editing the runtime
-  spawning algorithm and adding more branches.
-- A spawning configuration has several related values and invariants: a positive
-  interval, one or more non-null factories, and positive integer weights whose sum
-  must be representable. Builder fits this construction because callers can add an
-  arbitrary number of weighted entries incrementally and validate the complete
-  configuration at one explicit `build()` step.
-
-### Implemented solution and participants
-
-- `DropSpawnProfile` is the immutable product. It retains the spawn interval, the
-  weighted `DropFactory` registrations, and their validated total. Its nested
-  `Builder` supplies `spawnIntervalMillis(long)` and `addDrop(int, DropFactory)`;
-  constructor references such as `GoodDrop::new` and `BadDrop::new` satisfy the
-  two-coordinate factory contract directly.
-- `build()` rejects non-positive or nanosecond-overflowing intervals, an empty
-  registration list, non-positive weights, null factories, and integer overflow in
-  the accumulated weight. A completed profile defensively copies the registrations
-  and returns an unmodifiable list. Reusing and then modifying a builder therefore
-  cannot change profiles that it built earlier.
-- `DropSpawner` accepts a profile through its public constructor. It remains
-  responsible for elapsed-time checks, choosing a random point in the total integer
-  weight, walking the registered weights, selecting the horizontal coordinate, and
-  invoking the chosen factory at world height. Selection contains no drop-type
-  conditional, so another registered factory does not require an algorithm change.
-- Normal gameplay still creates `new DropSpawner()`. That convenience constructor
-  delegates to `standardProfile()`, which uses the Builder to register a 100 ms
-  interval, weight 6 for `GoodDrop`, and weight 4 for `BadDrop`. `GameSession`
-  continues to consume only the existing `DropSource` abstraction.
-
-### Compatibility and design principles
-
-- The integer weights reproduce the original 60/40 distribution without requiring
-  percentages to total 100. The session still receives an immediate initial drop;
-  later drops require elapsed time strictly greater than 100 ms. Spawns retain the
-  inclusive horizontal range from 0 through world width minus item size and the
-  same world-height y coordinate. Falling speed, collisions, effects, scoring,
-  damage, player movement, presentation, and audio code were not changed.
-- **Encapsulation and immutability:** profile state is final, validation protects
-  its invariants, and registration storage cannot be mutated through either the
-  builder or getter after construction.
-- **Information Expert / Creator / High Cohesion:** the Builder knows how to
-  assemble and validate the product, the profile owns configuration, `DropSpawner`
-  owns runtime creation policy, and `GameSession` remains the gameplay controller.
-- **Single Responsibility and Dependency Inversion:** construction, stored rules,
-  nondeterministic runtime behavior, and session flow remain separate. The session
-  depends on `DropSource`, while the spawner depends on the supplied profile and its
-  factory contract rather than concrete drop constructors.
-- **Open/Closed and Protected Variations:** weighted selection works over any number
-  of registrations. The existing `DropEffect` Strategy remains independent and is
-  still executed by `FallingItem`; Builder configures creation without replacing or
-  absorbing Strategy responsibilities.
-
-### Verification and future considerations
-
-- `DropSpawnProfileTest` covers successful construction, retained interval and
-  weights, read-only registrations, snapshots made from a reused builder, invalid
-  intervals, missing registrations, invalid weights, null factories, and total
-  weight overflow. `DropSpawnerTest` uses controlled random values and time to cover
-  exact weighted boundaries, one and several factories, the standard 6/4 profile,
-  the immediate first drop, strict interval timing, vertical placement, and the
-  inclusive horizontal boundary without flaky statistical assertions.
-- The complete automated test suite and Gradle build pass, and `git diff --check`
-  reports no whitespace errors. Automated tests do not replace a manual playthrough
-  for audiovisual behavior, but the balance constants and all unrelated gameplay
-  code remain unchanged.
-- Future difficulty levels, additional drops, UI-created profiles, or runtime
-  profile replacement can build or supply other profiles through the same boundary.
-  None of those features, nor persistence or progressive difficulty, is implemented
-  by this change.
-- The code-level GM-9 implementation is complete. The UML diagram required by the
-  academic GM-9 specification remains pending and is intentionally not created in
-  this iteration.
+- `./gradlew --offline --no-daemon :core:compileJava :lwjgl3:compileJava` passes
+  for the production sources. `git diff --check` also passes.
+- `./gradlew --offline --no-daemon :core:test :lwjgl3:compileJava` fails at
+  `:core:compileTestJava` because `org.mockito` is unavailable. The pre-existing local
+  `core/build.gradle` change removes Mockito, while `KeyboardPlayerInputTest` and
+  `BaseUiScreenTest` still import it. Tests therefore did not execute; neither the
+  build configuration nor those tests was changed by this update. The prior blanket
+  test/build pass statements are not carried forward as current evidence.
+- Pending academic artifacts are GM-1 mockups/screenshots, the GM-3 domain/framework
+  UML class diagram, and the GM-6/7/8/9 pattern UML diagrams. Their absence does not
+  mean the corresponding Java implementations are pending. This update creates
+  none of those artifacts; code changes are limited to redundant comment removal
+  and renaming the gameplay score label to **Puntaje**.
+- Manual desktop verification remains necessary for visual readability, drop textures
+  and sway, storm presentation, audio/volume behavior, all navigation actions,
+  persisted rankings/settings after restart, and pointer alignment after resizing.

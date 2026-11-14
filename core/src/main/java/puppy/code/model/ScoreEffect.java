@@ -1,8 +1,5 @@
 package puppy.code.model;
 
-/**
- * Awards a configurable number of points to the player.
- */
 public final class ScoreEffect implements DropEffect {
     private final int points;
 

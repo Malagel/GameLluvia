@@ -57,7 +57,6 @@ final class ScreenUi {
         return button;
     }
 
-    /** Adds a full-width menu button on its own row. */
     void addMenuButton(Table table, String text, Runnable action) {
         table.add(button(text, action))
                 .width(MENU_BUTTON_WIDTH)

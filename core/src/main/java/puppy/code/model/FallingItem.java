@@ -28,18 +28,10 @@ public abstract class FallingItem {
         setEffect(effect);
     }
 
-    /**
-     * Replaces this item's strategy. The next time the item is caught, the new effect is
-     * the one applied.
-     */
     public final void setEffect(DropEffect effect) {
         this.effect = Objects.requireNonNull(effect, "effect");
     }
 
-    /**
-     * Switches to the stronger version of the current effect when the rain intensifies.
-     * Each strategy decides what its stronger version is, so no type checks are needed.
-     */
     public final void intensify() {
         setEffect(effect.intensified());
     }
@@ -81,9 +73,6 @@ public abstract class FallingItem {
         return bounds.y;
     }
 
-    /**
-     * The visual identity of this kind of item, declared by each subclass.
-     */
     public abstract DropAppearance getAppearance();
 
     /**
