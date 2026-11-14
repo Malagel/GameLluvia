@@ -435,17 +435,18 @@ remain possible extensions. The required Builder UML diagram is still pending.
 
 - `./gradlew --offline --no-daemon :core:compileJava :lwjgl3:compileJava` passes
   for the production sources. `git diff --check` also passes.
-- `./gradlew --offline --no-daemon :core:test :lwjgl3:compileJava` fails at
-  `:core:compileTestJava` because `org.mockito` is unavailable. The pre-existing local
-  `core/build.gradle` change removes Mockito, while `KeyboardPlayerInputTest` and
-  `BaseUiScreenTest` still import it. Tests therefore did not execute; neither the
-  build configuration nor those tests was changed by this update. The prior blanket
-  test/build pass statements are not carried forward as current evidence.
+- Restored `org.mockito:mockito-core:5.12.0` as a `testImplementation` dependency in
+  `core/build.gradle`, as required by `KeyboardPlayerInputTest` and `BaseUiScreenTest`.
+  `./gradlew --offline --no-daemon :core:test :lwjgl3:compileJava` passes after the
+  dependency download: all 83 tests pass and desktop sources compile. The successful
+  run was outside the agent sandbox, which blocks Mockito's inline mock maker from
+  attaching its Java agent. No test behavior or production dependencies were changed.
 - Pending academic artifacts are GM-1 mockups/screenshots, the GM-3 domain/framework
   UML class diagram, and the GM-6/7/8/9 pattern UML diagrams. Their absence does not
   mean the corresponding Java implementations are pending. This update creates
-  none of those artifacts; code changes are limited to redundant comment removal
-  and renaming the gameplay score label to **Puntaje**.
+  none of those artifacts; changes are limited to redundant comment removal,
+  renaming the gameplay score label to **Puntaje**, and restoring the Mockito test
+  dependency.
 - Manual desktop verification remains necessary for visual readability, drop textures
   and sway, storm presentation, audio/volume behavior, all navigation actions,
   persisted rankings/settings after restart, and pointer alignment after resizing.
